@@ -167,6 +167,8 @@ class BlockBasedTable : public TableReader {
   // posix_fadvise
   void SetupForCompaction() override;
   void SetupForCompaction(std::string* alldata_block) override;
+  //--xuan
+  std::string SetupForCompactionHW() override { return std::string(); }
   std::shared_ptr<const TableProperties> GetTableProperties() const override;
 
   size_t ApproximateMemoryUsage() const override;

@@ -10,9 +10,11 @@
 #pragma once
 
 #include <stdint.h>
+
 #include <string>
 #include <utility>
 #include <vector>
+
 #include "db/dbformat.h"
 #include "db/table_properties_collector.h"
 #include "file/writable_file_writer.h"
@@ -122,7 +124,7 @@ struct TableBuilderOptions {
   const CompressionOptions& compression_opts;
   bool skip_filters;  // only used by BlockBasedTableBuilder
   const std::string& column_family_name;
-  int level; // what level this table/file is on, -1 for "not set, don't know"
+  int level;  // what level this table/file is on, -1 for "not set, don't know"
   const uint64_t creation_time;
   const int64_t oldest_key_time;
   const uint64_t target_file_size;
@@ -146,7 +148,9 @@ class TableBuilder {
   // REQUIRES: Finish(), Abandon() have not been called
   virtual void Add(const Slice& key, const Slice& value) = 0;
 
-  virtual void AddPack(std::string /*data_packs*/) { return; };
+  virtual void AddPack(const Slice& data_packs, uint32_t &last_entry_count) {
+    return;
+  };
 
   // Return non-ok iff some error has been detected.
   virtual Status status() const = 0;

@@ -298,9 +298,9 @@ void CompactionJob::AggregateStatistics() {
 }
 
 CompactionJob::CompactionJob(
-    int job_id, Compaction* compaction, const ImmutableDBOptions& db_options,
-    const FileOptions& file_options, VersionSet* versions,
-    const std::atomic<bool>* shutting_down,
+    int job_id, Compaction* compaction, HW* hw,  //--xuan
+    const ImmutableDBOptions& db_options, const FileOptions& file_options,
+    VersionSet* versions, const std::atomic<bool>* shutting_down,
     const SequenceNumber preserve_deletes_seqnum, LogBuffer* log_buffer,
     FSDirectory* db_directory, FSDirectory* output_directory, Statistics* stats,
     InstrumentedMutex* db_mutex, ErrorHandler* db_error_handler,
@@ -312,6 +312,7 @@ CompactionJob::CompactionJob(
     Env::Priority thread_pri, const std::atomic<bool>* manual_compaction_paused)
     : job_id_(job_id),
       compact_(new CompactionState(compaction)),
+      hw_(hw),
       compaction_job_stats_(compaction_job_stats),
       compaction_stats_(compaction->compaction_reason(), 1),
       dbname_(dbname),
@@ -935,51 +936,95 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
   }
   const auto& c_iter_stats = c_iter->iter_stats();
 
-  sub_compact->compaction->num_input_levels();
-  std::vector<std::string> input_data_packs;
-  for (size_t i = 0; i < 3; i++) {
-    // there are three levels
-    auto input_files = sub_compact->compaction->inputs(
-        i + sub_compact->compaction->start_level());
+  // For xuan
+#ifdef HARDWARE
+  if (sub_compact->compaction->num_input_files(0) == 2 ||
+      sub_compact->compaction->num_input_files(1) == 2 ||
+      sub_compact->compaction->num_input_files(2) == 2) {
+    auto input_files =
+        sub_compact->compaction->inputs(sub_compact->compaction->start_level());
+    std::vector<std::string> input_name_packs;
     for (auto input_file : *input_files) {
-      std::string input_data_pack;
-      input_file->fd.table_reader->SetupForCompaction(&input_data_pack);
-      input_data_packs.push_back(input_data_pack);
-      auto largest_seq = input_file->fd.largest_seqno;
-      auto smallest_seq = input_file->fd.smallest_seqno;
+      auto file_name = input_file->fd.table_reader->SetupForCompactionHW();
+      input_name_packs.push_back(file_name);
     }
-  }
 
-  // For XUAN
-  std::vector<std::string> result_data_packs;
-  for (auto output : result_data_packs) {
-    if (sub_compact->builder == nullptr) {
-      status = OpenCompactionOutputFile(sub_compact);
-      if (!status.ok()) {
-        break;
+    SequenceNumber smallest_snapshot;
+    if (existing_snapshots_.empty()) {
+      smallest_snapshot = versions_->LastSequence();
+    } else {
+      smallest_snapshot = existing_snapshots_.back();
+    }
+    hw_->InitInputFileSimple(input_name_packs, smallest_snapshot);
+    hw_->run_compaction_post();
+
+#ifdef EMU
+    uint512_t output_header = hw_->output_buf_ptr[0];
+    uint32_t output_block_num = output_header(31, 0);
+#else
+    uint32_t output_block_num = hw_->output_buf_ptr[0];
+#endif
+    printf("output block num: %u\n", output_block_num);
+    int NumOutput = Align(output_block_num, SST_BLOCK_NUM);
+    for (int i = 0; i < NumOutput; i++) {
+      if (sub_compact->builder == nullptr) {
+        status = OpenCompactionOutputFile(sub_compact);
+        if (!status.ok()) {
+          break;
+        }
       }
+
+      uint32_t SST_block_num, SST_size;
+      if (i == NumOutput - 1)
+        SST_block_num = output_block_num - i * SST_BLOCK_NUM;
+      else
+        SST_block_num = SST_BLOCK_NUM;
+      printf("out %d block num: %u\n", i, SST_block_num);
+
+      SST_size = BLOCK_SIZE * SST_block_num;
+      char output_buf[SST_size];
+#ifdef EMU
+      memcpy(output_buf, &hw_->output_buf_ptr[1 + i * SST_SIZE / 64], SST_size);
+#else
+      memcpy(output_buf, &hw_->output_buf_ptr[(64 + i * SST_SIZE) / 4],
+             SST_size);
+#endif
+      Slice output(output_buf, SST_size);
+      uint32_t last_entry_count;
+      sub_compact->builder->AddPack(output, last_entry_count);
+      sub_compact->current_output_file_size =
+          sub_compact->builder->EstimatedFileSize();
+      sub_compact->num_output_records = sub_compact->builder->NumEntries();
+
+      Slice smallest_key, largest_key, smallest_value, largest_value;
+      ParsedInternalKey smallest, largest;
+      smallest_key = Slice(output.data() + SST_SIZE - KeySize, KeySize);
+      largest_key = Slice(
+          output.data() + output.size() - last_entry_count * KeySize, KeySize);
+      smallest_value = Slice(output.data() + 64, ValueSize);
+      largest_value =
+          Slice(output.data() + output.size() + 64 +
+                    last_entry_count * ValueSize - SST_SIZE - ValueSize,
+                ValueSize);
+      ParseInternalKey(smallest_key, &smallest);
+      ParseInternalKey(largest_key, &largest);
+      sub_compact->current_output()->meta.UpdateBoundaries(
+          smallest_key, smallest_value, smallest.sequence, smallest.type);
+      sub_compact->current_output()->meta.UpdateBoundaries(
+          largest_key, largest_value, largest.sequence, largest.type);
+
+      bool output_file_ended = false;
+      Status input_status = input->status();
+
+      CompactionIterationStats range_del_out_stats;
+      status = FinishCompactionOutputFile(input_status, sub_compact,
+                                          &range_del_agg, &range_del_out_stats);
+      RecordDroppedKeys(range_del_out_stats,
+                        &sub_compact->compaction_job_stats);
     }
-    sub_compact->builder->AddPack(output);
-    sub_compact->current_output_file_size =
-        sub_compact->builder->EstimatedFileSize();
-    sub_compact->num_output_records = sub_compact->builder->NumEntries();
-    // For XUAN, it would be better to provide the first key/value and last
-    // key/value in the file, but I can do this in software.
-    //    sub_compact->current_output()->meta.UpdateBoundaries(
-    //        start_key, start_value, start_ikey.sequence, start_ikey.type);
-    //    sub_compact->current_output()->meta.UpdateBoundaries(
-    //        end_key, end_value, end_ikey.sequence, end_ikey.type);
-
-    bool output_file_ended = false;
-    Status input_status = input->status();
-
-    CompactionIterationStats range_del_out_stats;
-    status = FinishCompactionOutputFile(input_status, sub_compact,
-                                        &range_del_agg, &range_del_out_stats);
-    RecordDroppedKeys(range_del_out_stats, &sub_compact->compaction_job_stats);
-  }
-
-  /*
+  } else
+#endif
+  {
     while (status.ok() && !cfd->IsDropped() && c_iter->Valid()) {
       // Invariant: c_iter.status() is guaranteed to be OK if c_iter->Valid()
       // returns true.
@@ -1014,8 +1059,7 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
 
       // Close output file if it is big enough. Two possibilities determine it's
       // time to close it: (1) the current key should be this file's last key,
-    (2)
-      // the next key should not be in this file.
+      // (2) the next key should not be in this file.
       //
       // TODO(aekmekji): determine if file should be closed earlier than this
       // during subcompactions (i.e. if output size, estimated by input size, is
@@ -1027,9 +1071,9 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
           sub_compact->current_output_file_size >=
               sub_compact->compaction->max_output_file_size()) {
         // (1) this key terminates the file. For historical reasons, the
-    iterator
-        // status before advancing will be given to
-    FinishCompactionOutputFile(). input_status = input->status();
+        // iterator status before advancing will be given to
+        // FinishCompactionOutputFile().
+        input_status = input->status();
         output_file_ended = true;
       }
 
@@ -1044,9 +1088,9 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
       }
       if (!output_file_ended && c_iter->Valid() &&
           sub_compact->compaction->output_level() != 0 &&
-          sub_compact->ShouldStopBefore(c_iter->key(),
-                                        sub_compact->current_output_file_size)
-    && sub_compact->builder != nullptr) {
+          sub_compact->ShouldStopBefore(
+              c_iter->key(), sub_compact->current_output_file_size) &&
+          sub_compact->builder != nullptr) {
         // (2) this key belongs to the next file. For historical reasons, the
         // iterator status after advancing will be given to
         // FinishCompactionOutputFile().
@@ -1061,14 +1105,15 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
           next_key = &c_iter->key();
         }
         CompactionIterationStats range_del_out_stats;
-        status =
-            FinishCompactionOutputFile(input_status, sub_compact,
-    &range_del_agg, &range_del_out_stats, next_key);
+        status = FinishCompactionOutputFile(input_status, sub_compact,
+                                            &range_del_agg,
+                                            &range_del_out_stats, next_key);
         RecordDroppedKeys(range_del_out_stats,
                           &sub_compact->compaction_job_stats);
       }
     }
-  */
+  }
+
   sub_compact->compaction_job_stats.num_input_deletion_records =
       c_iter_stats.num_input_deletion_records;
   sub_compact->compaction_job_stats.num_corrupt_keys =

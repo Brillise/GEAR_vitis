@@ -9,8 +9,8 @@
 
 #pragma once
 #ifndef ROCKSDB_LITE
-#include <string>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -26,7 +26,7 @@ namespace ROCKSDB_NAMESPACE {
 class Arena;
 class TableReader;
 
-class CuckooTableReader: public TableReader {
+class CuckooTableReader : public TableReader {
  public:
   CuckooTableReader(const ImmutableCFOptions& ioptions,
                     std::unique_ptr<RandomAccessFileReader>&& file,
@@ -73,7 +73,8 @@ class CuckooTableReader: public TableReader {
   void SetupForCompaction() override {}
   // End of methods not implemented.
 
-    void SetupForCompaction(std::string* all_data) override{};
+  void SetupForCompaction(std::string* all_data) override{};
+  std::string SetupForCompactionHW() override{};  //--xuan
  private:
   friend class CuckooTableIterator;
   void LoadAllKeys(std::vector<std::pair<Slice, uint32_t>>* key_to_bucket_id);
@@ -95,7 +96,7 @@ class CuckooTableReader: public TableReader {
   uint64_t table_size_;
   const Comparator* ucomp_;
   uint64_t (*get_slice_hash_)(const Slice& s, uint32_t index,
-      uint64_t max_num_buckets);
+                              uint64_t max_num_buckets);
 };
 
 }  // namespace ROCKSDB_NAMESPACE

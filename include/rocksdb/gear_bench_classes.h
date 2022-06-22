@@ -1145,7 +1145,7 @@ class Benchmark {
     if (mock_db_ != nullptr && mock_db_opened_) {
       mock_db_->FreeDB();
     }
-//    delete mock_db_;
+    //    delete mock_db_;
 
     delete prefix_extractor_;
     if (cache_.get() != nullptr) {
@@ -1338,7 +1338,6 @@ class Benchmark {
                    DBWithColumnFamilies* db) {
     Status s;
     // Open with column families if necessary.
-
     std::cout << "----------------Open RocksDB----------------" << std::endl;
     std::cout << db_name << std::endl;
     s = DB::Open(options, db_name, &db->db);

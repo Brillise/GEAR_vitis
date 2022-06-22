@@ -61,6 +61,13 @@ if (CCACHE_FOUND)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif (CCACHE_FOUND)
 
+#--xuan
+SET(XILINX_XRT "/opt/xilinx/xrt")
+SET(VITIS_PLATFORM "xilinx_aws-vu9p-f1_shell-v04261818_201920_3")
+SET(VITIS_PLATFORM_DIR "/home/sunny/aws-fpga/Vitis/aws_platform/xilinx_aws-vu9p-f1_shell-v04261818_201920_3")
+SET(VITIS_PLATFORM_PATH "${VITIS_PLATFORM_DIR}/xilinx_aws-vu9p-f1_shell-v04261818_201920_3.xpfm")
+add_definitions(-DVITIS_PLATFORM=${VITIS_PLATFORM} -D__USE_XOPEN2K8)
+
 option(WITH_JEMALLOC "build with JeMalloc" OFF)
 option(WITH_SNAPPY "build with SNAPPY" OFF)
 option(WITH_LZ4 "build with lz4" OFF)
@@ -333,7 +340,8 @@ if (FAIL_ON_WARNINGS)
     if (MSVC)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /WX")
     else () # assume GCC
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+        #        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
     endif ()
 endif ()
 
@@ -547,6 +555,11 @@ endif ()
 
 include_directories(${PROJECT_SOURCE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/include)
+#--xuan
+include_directories(
+        "${XILINX_XRT}/include/"
+        "/opt/Xilinx/Vitis_HLS/2021.2/include/"
+)
 if (WITH_FOLLY_DISTRIBUTED_MUTEX)
     include_directories(${PROJECT_SOURCE_DIR}/third-party/folly)
 endif ()
@@ -578,6 +591,10 @@ set(SOURCES
         db/compaction/compaction_picker_level.cc
         db/compaction/compaction_picker_universal.cc
         db/compaction/compaction_picker_gear.cc
+        db/compaction/hw.cpp    #--xuan
+        db/compaction/device.cpp
+        db/compaction/kernel_emu.cpp
+        db/compaction/xcl2.cpp
         db/convenience.cc
         db/db_filesnapshot.cc
         db/db_impl/db_impl.cc
@@ -888,7 +905,7 @@ else ()
 endif ()
 
 add_library(${ROCKSDB_STATIC_LIB} STATIC ${SOURCES})
-target_link_libraries(${ROCKSDB_STATIC_LIB} PRIVATE
+target_link_libraries(${ROCKSDB_STATIC_LIB}
         ${THIRDPARTY_LIBS} ${SYSTEM_LIBS})
 
 if (ROCKSDB_BUILD_SHARED)
@@ -1257,13 +1274,15 @@ if (WITH_BENCHMARK_TOOLS)
     target_link_libraries(db_bench
             ${ROCKSDB_LIB})
 
+    LINK_DIRECTORIES(${XILINX_XRT}/lib/)    #--xuan
     add_executable(gear_bench
             tools/gear_bench_classes.cc
             tools/gear_bench.cc
-            tools/gear_bench_tool.cc)
+            tools/gear_bench_tool.cc
+            )
+    target_link_libraries(${ROCKSDB_LIB} INTERFACE xilinxopencl -Wl,-rpath-link,${XILINX_XRT}/lib)  #--xuan
     target_link_libraries(gear_bench
             ${ROCKSDB_LIB} gflags)
-
 
     add_executable(cache_bench
             cache/cache_bench.cc)

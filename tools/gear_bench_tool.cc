@@ -120,7 +120,7 @@ DEFINE_int64(bench_threads, 1, "number of working threads");
 DEFINE_int64(duration, 0, "Duration of Fill workloads");
 DEFINE_double(span_range, 1.0, "The overlapping range of ");
 DEFINE_double(min_value, 0, "The min values of the key range");
-DEFINE_uint64(distinct_num, 1000000, "number of distinct entries");
+DEFINE_uint64(distinct_num, 1500000, "number of distinct entries");
 DEFINE_uint64(existing_entries, 8000000000,
               "The number of entries inside existing database, this option "
               "will be ignored while use_existing_data is triggered");
@@ -168,10 +168,13 @@ void ConfigByGFLAGS(Options& opt) {
   opt.create_if_missing = !FLAGS_use_exist_db;
   opt.max_open_files = FLAGS_max_open_files;
   opt.env = FLAGS_env;
-  opt.write_buffer_size =
-      FLAGS_write_buffer_size * (FLAGS_key_size + FLAGS_value_size);
-  opt.target_file_size_base =
-      FLAGS_target_file_size_base * (FLAGS_key_size + FLAGS_value_size);
+  auto memtable_size = 800 * 312 * 26;
+  auto sst_size = 800 * 8192;
+  opt.write_buffer_size = memtable_size * 2;
+  //      FLAGS_write_buffer_size * (FLAGS_key_size + FLAGS_value_size);
+  opt.target_file_size_base = sst_size;
+  opt.level0_file_num_compaction_trigger = 2;
+  //      FLAGS_target_file_size_base * (FLAGS_key_size + FLAGS_value_size);
   opt.max_background_jobs = FLAGS_max_background_compactions + 1;
   opt.index_dir_prefix = FLAGS_index_dir_prefix;
   opt.max_subcompactions = FLAGS_max_background_compactions;

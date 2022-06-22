@@ -43,6 +43,7 @@
 #include "util/autovector.h"
 #include "util/stop_watch.h"
 #include "util/thread_local.h"
+#include "db/compaction/hw.h"
 
 namespace ROCKSDB_NAMESPACE {
 
@@ -63,6 +64,7 @@ class VersionSet;
 class CompactionJob {
  public:
   CompactionJob(int job_id, Compaction* compaction,
+                HW* hw,  //--xuan
                 const ImmutableDBOptions& db_options,
                 const FileOptions& file_options, VersionSet* versions,
                 const std::atomic<bool>* shutting_down,
@@ -147,6 +149,7 @@ class CompactionJob {
   // CompactionJob state
   struct CompactionState;
   CompactionState* compact_;
+  HW* hw_;   //--xuan
   CompactionJobStats* compaction_job_stats_;
   InternalStats::CompactionStats compaction_stats_;
 

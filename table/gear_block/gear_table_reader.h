@@ -95,6 +95,7 @@ class GearTableReader : public TableReader {
   virtual ~GearTableReader();
   void SetupForCompaction() override{};
   void SetupForCompaction(std::string* all_data_blocks) override;
+  std::string SetupForCompactionHW() override;
   std::string full_data_blocks;
 
  protected:

@@ -148,6 +148,7 @@ DBImpl::DBImpl(const DBOptions& options, const std::string& dbname,
                const bool seq_per_batch, const bool batch_per_txn)
     : dbname_(dbname),
       own_info_log_(options.info_log == nullptr),
+      hw_(new HW),   //--xuan
       initial_db_options_(SanitizeOptions(dbname, options)),
       env_(initial_db_options_.env),
       fs_(initial_db_options_.env->GetFileSystem()),
@@ -608,6 +609,9 @@ Status DBImpl::CloseHelper() {
 Status DBImpl::CloseImpl() { return CloseHelper(); }
 
 DBImpl::~DBImpl() {
+  //--xuan
+  if(hw_)
+    delete hw_;
   if (!closed_) {
     closed_ = true;
     CloseHelper();

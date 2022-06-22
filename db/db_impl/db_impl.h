@@ -61,6 +61,7 @@
 #include "util/repeatable_thread.h"
 #include "util/stop_watch.h"
 #include "util/thread_local.h"
+#include "db/compaction/hw.h"
 
 namespace ROCKSDB_NAMESPACE {
 
@@ -994,6 +995,8 @@ class DBImpl : public DB {
   bool own_info_log_;
   const DBOptions initial_db_options_;
   Env* const env_;
+  //--xuan
+  HW * hw_;
   std::shared_ptr<FileSystem> fs_;
   const ImmutableDBOptions immutable_db_options_;
   MutableDBOptions mutable_db_options_;

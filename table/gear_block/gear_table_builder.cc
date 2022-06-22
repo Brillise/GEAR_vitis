@@ -254,6 +254,7 @@ Status GearTableBuilder::Finish() {
   if (io_status_.ok()) {
     offset_ += meta_block.size();
   }
+  io_status_ = file_->Flush();
   status_ = io_status_;
   return status_;
 }
@@ -281,7 +282,8 @@ const char* GearTableBuilder::GetFileChecksumFuncName() const {
     return kUnknownFileChecksumFuncName;
   }
 }
-void GearTableBuilder::AddPack(std::string data_packs) {
+void GearTableBuilder::AddPack(const Slice& data_packs,
+                               uint32_t &last_entry_count) {
   // This function can be only called from an empty builder
   assert(properties_.num_entries == 0);
   current_key_length = 0;
@@ -295,6 +297,7 @@ void GearTableBuilder::AddPack(std::string data_packs) {
     uint32_t fixed_32_read_pos = 0;
     GetFixed32(&temp, &fixed_32_read_pos);
     GetFixed32(&temp, &page_entry_count);
+    last_entry_count = page_entry_count;
     uint32_t key_length, value_length, placeholder_length = 0;
     GetFixed32(&temp, &key_length);
     GetFixed32(&temp, &value_length);
@@ -302,13 +305,12 @@ void GearTableBuilder::AddPack(std::string data_packs) {
     assert(key_length / 16 == page_entry_count &&
            value_length / 10 == page_entry_count);
     assert(key_length + value_length + placeholder_length == 8 * 1024);
-    properties_.num_entries += page_entry_count;
     properties_.raw_key_size += key_length;
     properties_.raw_value_size += value_length;
-    properties_.data_size += 8 * 1024;
+    offset_ += 8 * 1024;
     properties_.num_entries += page_entry_count;
   }
-  Finish();
+  //  Finish();  //no need
 }
 
 }  // namespace ROCKSDB_NAMESPACE

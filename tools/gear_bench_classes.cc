@@ -142,7 +142,6 @@ void MockFileGenerator::NewDB(bool use_existing_data) {
   for (int i = 0; i < bench_threads_; i++) {
     writers_[i].reset(new SstFileWriter(env_options_, options_, handle));
   }
-
 }
 
 Status MockFileGenerator::AddMockFile(const stl_wrappers::KVMap& contents,
@@ -251,8 +250,8 @@ Status MockFileGenerator::AddMockFile(uint64_t start_num, uint64_t end_num,
   mutex_.Unlock();
   uint64_t total = env_->NowMicros() - start;
   total /= kMicrosInSecond;
-  std::cout << "thread id: " << thread_id << "Single File cost(sec): " << total
-            << std::endl;
+  std::cout << "thread id: " << thread_id
+            << "  Single File cost(sec): " << total << std::endl;
   //  assert(s.ok());
   return s;
 }
@@ -310,7 +309,7 @@ Status MockFileGenerator::TriggerCompaction() {
   std::cout << "Start the compaction job at: " << env_->NowMicros()
             << std::endl;
   CompactionJob compaction_job(
-      0, compaction_ptr, db_options_, env_options_, versions_.get(),
+      0, compaction_ptr, nullptr, db_options_, env_options_, versions_.get(),
       &shutting_down_, preserve_deletes_seqnum_, &log_buffer, nullptr, nullptr,
       nullptr, &mutex_, &error_handler_, snapshots,
       earliest_write_conflict_snapshot, snapshot_checker, table_cache_,

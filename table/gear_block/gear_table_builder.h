@@ -62,7 +62,7 @@ class GearTableBuilder : public TableBuilder {
   // REQUIRES: Finish(), Abandon() have not been called
   void Add(const Slice& key, const Slice& value) override;
 
-  void AddPack(std::string data_packs);
+  void AddPack(const Slice& data_packs, uint32_t &last_entry_count);
   // Return non-ok iff some error has been detected.
   Status status() const override { return status_; }
 

@@ -232,6 +232,10 @@ void GearTableReader::SetupForCompaction(std::string* all_data_blocks) {
   this->file_reader_->ReadAllDataBlock(all_data_blocks);
 }
 
+std::string GearTableReader::SetupForCompactionHW() {
+  return this->file_reader_->ReadHW();
+}
+
 InternalIterator* GearTableReader::NewIterator(
     const ReadOptions& options, const SliceTransform* /* prefix_extractor */,
     Arena* arena, bool /*skip_filters*/, TableReaderCaller /*caller*/,

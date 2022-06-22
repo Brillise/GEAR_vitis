@@ -1022,7 +1022,7 @@ Status DBImpl::CompactFilesImpl(
   assert(is_snapshot_supported_ || snapshots_.empty());
   CompactionJobStats compaction_job_stats;
   CompactionJob compaction_job(
-      job_context->job_id, c.get(), immutable_db_options_,
+      job_context->job_id, c.get(), hw_, immutable_db_options_,
       file_options_for_compaction_, versions_.get(), &shutting_down_,
       preserve_deletes_seqnum_.load(), log_buffer, directories_.GetDbDir(),
       GetDataDir(c->column_family_data(), c->output_path_id()), stats_, &mutex_,
@@ -2845,7 +2845,7 @@ Status DBImpl::BackgroundCompaction(bool* made_progress,
                        &earliest_write_conflict_snapshot, &snapshot_checker);
     assert(is_snapshot_supported_ || snapshots_.empty());
     CompactionJob compaction_job(
-        job_context->job_id, c.get(), immutable_db_options_,
+        job_context->job_id, c.get(), hw_, immutable_db_options_,
         file_options_for_compaction_, versions_.get(), &shutting_down_,
         preserve_deletes_seqnum_.load(), log_buffer, directories_.GetDbDir(),
         GetDataDir(c->column_family_data(), c->output_path_id()), stats_,
