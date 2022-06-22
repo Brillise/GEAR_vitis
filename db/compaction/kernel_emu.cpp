@@ -533,7 +533,7 @@ void stream_to_gmem(uint32_t block_num, hls::stream<uint512_t> &outKeyStream,
       tmp_header(95, 64) = KeySize * EntryNum;
       tmp_header(127, 96) = ValueSize * EntryNum;
       tmp_header(159, 128) =
-          BLOCK_SIZE - ValueSize * EntryNum - KeySize * EntryNum-64;
+          BLOCK_SIZE - ValueSize * EntryNum - KeySize * EntryNum - 64;
       buf0[0] = tmp_header;
     }
   }
@@ -601,8 +601,8 @@ void stream_to_gmem(uint32_t block_num, hls::stream<uint512_t> &outKeyStream,
   tmp_header(63, 32) = entry_num;
   tmp_header(95, 64) = KeySize * entry_num;
   tmp_header(127, 96) = ValueSize * entry_num;
-  tmp_header(159, 128) = BLOCK_SIZE - ValueSize * entry_num -
-                         KeySize * entry_num - 64;  // 64 is the header length
+  tmp_header(159, 128) =
+      BLOCK_SIZE - ValueSize * entry_num - KeySize * entry_num - 64;
   if (first_flag) {
     if (finished) {
       buf1[0] = tmp_header;

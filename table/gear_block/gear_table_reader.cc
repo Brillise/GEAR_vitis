@@ -232,6 +232,7 @@ void GearTableReader::SetupForCompaction(std::string* all_data_blocks) {
   this->file_reader_->ReadAllDataBlock(all_data_blocks);
 }
 
+//--xuan
 std::string GearTableReader::SetupForCompactionHW() {
   return this->file_reader_->ReadHW();
 }

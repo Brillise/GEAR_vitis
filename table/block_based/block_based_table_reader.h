@@ -19,7 +19,6 @@
 #include "table/table_properties_internal.h"
 #include "table/table_reader.h"
 #include "table/two_level_iterator.h"
-
 #include "trace_replay/block_cache_tracer.h"
 
 namespace ROCKSDB_NAMESPACE {
@@ -167,8 +166,7 @@ class BlockBasedTable : public TableReader {
   // posix_fadvise
   void SetupForCompaction() override;
   void SetupForCompaction(std::string* alldata_block) override;
-  //--xuan
-  std::string SetupForCompactionHW() override { return std::string(); }
+  std::string SetupForCompactionHW() override;
   std::shared_ptr<const TableProperties> GetTableProperties() const override;
 
   size_t ApproximateMemoryUsage() const override;

@@ -74,7 +74,7 @@ class CuckooTableReader : public TableReader {
   // End of methods not implemented.
 
   void SetupForCompaction(std::string* all_data) override{};
-  std::string SetupForCompactionHW() override{};  //--xuan
+  std::string SetupForCompactionHW() override{};
  private:
   friend class CuckooTableIterator;
   void LoadAllKeys(std::vector<std::pair<Slice, uint32_t>>* key_to_bucket_id);
