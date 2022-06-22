@@ -28,6 +28,12 @@ Slice GearTableFileReader::GetFromBuffer(Buffer* buffer, uint32_t file_offset,
                len);
 }
 
+// xuan - fast read for FPGA
+std::string GearTableFileReader::ReadHW() {
+  std::string sst_name = file_info_->file->file_name();
+  return sst_name;
+}
+
 bool GearTableFileReader::ReadNonMmap(uint32_t file_offset, uint32_t len,
                                       Slice* out) {
   const uint32_t kPrefetchSize = 256u;
@@ -163,8 +169,8 @@ Status GearTableFileReader::NextBlock(uint32_t offset,
   }
   data_block_num = header_fields[0];
   entry_count = header_fields[1];
-  value_array_length = header_fields[2];
-  key_array_length = header_fields[3];
+  key_array_length = header_fields[2];
+  value_array_length = header_fields[3];
   placeholder_length_ = header_fields[4];
 
   data_pages.data_page_list.emplace_back(data_block_num, entry_count,

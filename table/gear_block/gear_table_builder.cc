@@ -105,8 +105,8 @@ void GearTableBuilder::FlushDataBlock() {
 
   PutFixed32(&block_header_buffer, properties_.num_data_blocks);
   PutFixed32(&block_header_buffer, page_entry_count);
-  PutFixed32(&block_header_buffer, (uint32_t)block_value_buffer.size());
   PutFixed32(&block_header_buffer, (uint32_t)block_key_buffer.size());
+  PutFixed32(&block_header_buffer, (uint32_t)block_value_buffer.size());
   PutFixed32(&block_header_buffer, placeholder_length);
 
   // place holder
@@ -283,7 +283,7 @@ const char* GearTableBuilder::GetFileChecksumFuncName() const {
   }
 }
 void GearTableBuilder::AddPack(const Slice& data_packs,
-                               uint32_t &last_entry_count) {
+                               uint32_t& last_entry_count) {
   // This function can be only called from an empty builder
   assert(properties_.num_entries == 0);
   current_key_length = 0;
@@ -292,6 +292,7 @@ void GearTableBuilder::AddPack(const Slice& data_packs,
   for (size_t i = 0; i < data_packs.size(); i += 8 * 1024) {
     // iterate from the first byte
     Slice temp(data_byte_array + i, 8 * 1024);
+    io_status_ = file_->Append(temp);
     // get the entry count from the file
     properties_.num_data_blocks++;
     uint32_t fixed_32_read_pos = 0;
@@ -304,12 +305,13 @@ void GearTableBuilder::AddPack(const Slice& data_packs,
     GetFixed32(&temp, &placeholder_length);
     assert(key_length / 16 == page_entry_count &&
            value_length / 10 == page_entry_count);
-    assert(key_length + value_length + placeholder_length == 8 * 1024);
+    assert(64 + key_length + value_length + placeholder_length == 8 * 1024);
     properties_.raw_key_size += key_length;
     properties_.raw_value_size += value_length;
     offset_ += 8 * 1024;
     properties_.num_entries += page_entry_count;
   }
+  io_status_ = file_->Flush();
   //  Finish();  //no need
 }
 
