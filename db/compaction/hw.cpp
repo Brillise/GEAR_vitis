@@ -101,10 +101,10 @@ void HW::InitInputFileSimple(std::vector<std::string> dbname,
   in_data_Ext0.flags = XCL_MEM_DDR_BANK0;
   in_data_Ext0.obj = input_buf_ptr0.data();
   in_data_Ext0.param = 0;
-  in_data_Ext1.flags = XCL_MEM_DDR_BANK1;
+  in_data_Ext1.flags = XCL_MEM_DDR_BANK0;
   in_data_Ext1.obj = input_buf_ptr1.data();
   in_data_Ext1.param = 0;
-  out_data_Ext.flags = XCL_MEM_DDR_BANK2;
+  out_data_Ext.flags = XCL_MEM_DDR_BANK1;
   out_data_Ext.obj = output_buf_ptr.data();
   out_data_Ext.param = 0;
   OCL_CHECK(err, cl::Buffer buffer_in0(context,
