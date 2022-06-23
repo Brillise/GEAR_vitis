@@ -925,27 +925,32 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
       &range_del_agg, sub_compact->compaction, compaction_filter,
       shutting_down_, preserve_deletes_seqnum_, manual_compaction_paused_,
       db_options_.info_log));
+
   auto c_iter = sub_compact->c_iter.get();
-  c_iter->SeekToFirst();
-  if (c_iter->Valid() && sub_compact->compaction->output_level() != 0) {
-    // ShouldStopBefore() maintains state based on keys processed so far. The
-    // compaction loop always calls it on the "next" key, thus won't tell it the
-    // first key. So we do that here.
-    sub_compact->ShouldStopBefore(c_iter->key(),
-                                  sub_compact->current_output_file_size);
+  if (sub_compact->compaction->num_input_files(
+          sub_compact->compaction->start_level()) != 2) {
+    c_iter->SeekToFirst();
+    if (c_iter->Valid() && sub_compact->compaction->output_level() != 0) {
+      sub_compact->ShouldStopBefore(c_iter->key(),
+                                    sub_compact->current_output_file_size);
+    }
   }
   const auto& c_iter_stats = c_iter->iter_stats();
 
   // For xuan
 #ifdef HARDWARE
-  if (sub_compact->compaction->num_input_files(0) == 2 ||
-      sub_compact->compaction->num_input_files(1) == 2 ||
-      sub_compact->compaction->num_input_files(2) == 2) {
+  if (sub_compact->compaction->num_input_files(
+          sub_compact->compaction->start_level()) == 2) {
     auto input_files =
         sub_compact->compaction->inputs(sub_compact->compaction->start_level());
     std::vector<std::string> input_name_packs;
     for (auto input_file : *input_files) {
-      auto file_name = input_file->fd.table_reader->SetupForCompactionHW();
+      //      assert(input_file->fd.table_reader != nullptr);
+      //      auto file_name =
+      //      input_file->fd.table_reader->SetupForCompactionHW();
+      std::string file_name =
+          TableFileName(cfd->ioptions()->cf_paths, input_file->fd.GetNumber(),
+                        input_file->fd.GetPathId());
       input_name_packs.push_back(file_name);
     }
 
@@ -998,13 +1003,13 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
 
       Slice smallest_key, largest_key, smallest_value, largest_value;
       ParsedInternalKey smallest, largest;
-      smallest_key = Slice(output.data() + SST_SIZE - KeySize, KeySize);
+      smallest_key = Slice(output.data() + BLOCK_SIZE - KeySize, KeySize);
       largest_key = Slice(
           output.data() + output.size() - last_entry_count * KeySize, KeySize);
       smallest_value = Slice(output.data() + 64, ValueSize);
       largest_value =
           Slice(output.data() + output.size() + 64 +
-                    last_entry_count * ValueSize - SST_SIZE - ValueSize,
+                    last_entry_count * ValueSize - BLOCK_SIZE - ValueSize,
                 ValueSize);
       ParseInternalKey(smallest_key, &smallest);
       ParseInternalKey(largest_key, &largest);
