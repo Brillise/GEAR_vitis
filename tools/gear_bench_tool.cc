@@ -3,6 +3,7 @@
 //
 #include <iostream>
 
+#include "db/compaction/common.h"
 #include "rocksdb/gear_bench.h"
 #include "rocksdb/gear_bench_classes.h"
 #ifdef GFLAGS
@@ -132,10 +133,10 @@ DEFINE_int32(value_size, 10, "size of each value");
 // DB column settings
 DEFINE_int32(max_background_compactions, 1,
              "Number of concurrent threads to run.");
-DEFINE_uint64(write_buffer_size, 312 * 800,
+DEFINE_uint64(write_buffer_size, 312 * SST_BLOCK_NUM,
               "Size of Memtable, each flush will directly create a l2 small "
               "tree spanning in the entire key space");
-DEFINE_uint64(target_file_size_base, 312 * 800,
+DEFINE_uint64(target_file_size_base, 312 * SST_BLOCK_NUM,
               "Size of Memtable, each flush will directly create a l2 small "
               "tree spanning in the entire key space");
 DEFINE_uint64(max_compaction_bytes, 50000000000,
@@ -168,8 +169,8 @@ void ConfigByGFLAGS(Options& opt) {
   opt.create_if_missing = !FLAGS_use_exist_db;
   opt.max_open_files = FLAGS_max_open_files;
   opt.env = FLAGS_env;
-  auto memtable_size = 800 * 312 * 26;
-  auto sst_size = 800 * 8192;
+  auto memtable_size = SST_BLOCK_NUM * 312 * 26;
+  auto sst_size = SST_SIZE;
   opt.write_buffer_size = memtable_size * 2;
   //      FLAGS_write_buffer_size * (FLAGS_key_size + FLAGS_value_size);
   opt.target_file_size_base = sst_size;
@@ -369,6 +370,7 @@ void Benchmark::Run() {
     value_size_ = FLAGS_value_size;
     key_size_ = FLAGS_key_size;
     write_options_ = WriteOptions();
+    write_options_.disableWAL = true;
 
     void (Benchmark::*method)(ThreadState*) = nullptr;
     void (Benchmark::*post_process_method)() = nullptr;

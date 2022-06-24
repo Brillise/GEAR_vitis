@@ -11,8 +11,8 @@
 #define NumInput (2)
 #define BLOCK_SIZE (8192)
 #define BLOCK_SIZE_512 (BLOCK_SIZE / 64)
-#define SST_BLOCK_NUM (800)
-#define SST_SIZE (BLOCK_SIZE * SST_BLOCK_NUM)
+#define SST_SIZE (1 << 23)
+#define SST_BLOCK_NUM (SST_SIZE / BLOCK_SIZE)
 
 #define UserKeySize (8)
 #define KeySize (16)
