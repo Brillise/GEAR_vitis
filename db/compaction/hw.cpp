@@ -7,9 +7,9 @@ namespace ROCKSDB_NAMESPACE {
 HW::HW() {
 #ifdef HARDWARE
   std::string binaryPath =
-      "/home/sunny/Downloads/new_compaction/vitis_compaction_sequence/";
+      "/home/sunny/Documents/new_compaction/vitis_prj/vitis_compaction_meta/";
   std::string binaryFileName =
-      binaryPath + "compaction/Hardware/binary_container_1.awsxclbin";
+      binaryPath + "compaction/Hardware/compaction_meta.xclbin";
 #ifndef EMU
   init_device(context, q, krnl_compact, binaryFileName, err);
 #endif
