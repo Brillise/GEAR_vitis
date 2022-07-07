@@ -939,8 +939,9 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
 
   // For xuan
 #ifdef HARDWARE
-  if (sub_compact->compaction->num_input_files(
-          sub_compact->compaction->start_level()) == 2) {
+  int input_num = sub_compact->compaction->num_input_files(
+      sub_compact->compaction->start_level());
+  if (input_num >= 2 && input_num <= NumInput) {
     auto input_files =
         sub_compact->compaction->inputs(sub_compact->compaction->start_level());
     std::vector<std::string> input_name_packs;
@@ -960,8 +961,7 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
     } else {
       smallest_snapshot = existing_snapshots_.back();
     }
-    printf("smallest_snapshot %lu\n", smallest_snapshot);
-    hw_->InitInputFileSimple(input_name_packs, smallest_snapshot);
+    hw_->InitInputFileSimple(input_name_packs, input_num, smallest_snapshot);
     hw_->run_compaction_post();
 
 #ifdef EMU
@@ -988,7 +988,7 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
       printf("out %d block num: %u\n", i, SST_block_num);
 
       SST_size = BLOCK_SIZE * SST_block_num;
-      char* output_buf= static_cast<char*>(malloc(SST_size));
+      char* output_buf = static_cast<char*>(malloc(SST_size));
 #ifdef EMU
       memcpy(output_buf, &hw_->output_buf_ptr[1 + i * SST_SIZE / 64], SST_size);
 #else

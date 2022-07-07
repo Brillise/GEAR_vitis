@@ -36,7 +36,7 @@ class HW {
   ~HW();  // destructor
 
  public:
-  void InitInputFileSimple(std::vector<std::string> dbname,
+  void InitInputFileSimple(std::vector<std::string> dbname, int input_num,
                            uint64_t smallest_snapshot);
   void run_compaction_post();
 
@@ -50,6 +50,8 @@ class HW {
 #else
   std::vector<int, aligned_allocator<int> > input_buf_ptr0;
   std::vector<int, aligned_allocator<int> > input_buf_ptr1;
+  std::vector<int, aligned_allocator<int> > input_buf_ptr2;
+  std::vector<int, aligned_allocator<int> > input_buf_ptr3;
 #endif
 
   cl_int err;

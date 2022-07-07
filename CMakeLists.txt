@@ -64,7 +64,7 @@ endif (CCACHE_FOUND)
 #--xuan
 SET(XILINX_XRT "/opt/xilinx/xrt")
 SET(VITIS_PLATFORM "xilinx_aws-vu9p-f1_shell-v04261818_201920_3")
-SET(VITIS_PLATFORM_DIR "/home/centos/aws-fpga/Vitis/aws_platform/xilinx_aws-vu9p-f1_shell-v04261818_201920_3")
+SET(VITIS_PLATFORM_DIR "/home/sunny/aws-fpga/Vitis/aws_platform/xilinx_aws-vu9p-f1_shell-v04261818_201920_3")
 SET(VITIS_PLATFORM_PATH "${VITIS_PLATFORM_DIR}/xilinx_aws-vu9p-f1_shell-v04261818_201920_3.xpfm")
 add_definitions(-DVITIS_PLATFORM=${VITIS_PLATFORM} -D__USE_XOPEN2K8)
 
