@@ -960,6 +960,7 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
     } else {
       smallest_snapshot = existing_snapshots_.back();
     }
+    printf("smallest_snapshot %lu\n", smallest_snapshot);
     hw_->InitInputFileSimple(input_name_packs, smallest_snapshot);
     hw_->run_compaction_post();
 
@@ -1026,6 +1027,7 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
                                           &range_del_agg, &range_del_out_stats);
       RecordDroppedKeys(range_del_out_stats,
                         &sub_compact->compaction_job_stats);
+      free(output_buf);
     }
   } else
 #endif

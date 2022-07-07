@@ -121,7 +121,7 @@ DEFINE_int64(bench_threads, 1, "number of working threads");
 DEFINE_int64(duration, 0, "Duration of Fill workloads");
 DEFINE_double(span_range, 1.0, "The overlapping range of ");
 DEFINE_double(min_value, 0, "The min values of the key range");
-DEFINE_uint64(distinct_num, 15000000, "number of distinct entries");
+DEFINE_uint64(distinct_num, 120000000, "number of distinct entries");
 DEFINE_uint64(existing_entries, 8000000000,
               "The number of entries inside existing database, this option "
               "will be ignored while use_existing_data is triggered");
@@ -370,7 +370,7 @@ void Benchmark::Run() {
     value_size_ = FLAGS_value_size;
     key_size_ = FLAGS_key_size;
     write_options_ = WriteOptions();
-    write_options_.disableWAL = true;
+    write_options_.disableWAL = false;
 
     void (Benchmark::*method)(ThreadState*) = nullptr;
     void (Benchmark::*post_process_method)() = nullptr;
@@ -484,7 +484,7 @@ void Benchmark::DoWrite(ThreadState* thread, WriteMode write_mode) {
 
   int64_t stage = 0;
   int64_t num_written = 0;
-
+  int current_fill_num = 0;
   while (!duration.Done(1)) {
     if (duration.GetStage() != stage) {
       stage = duration.GetStage();
@@ -503,22 +503,26 @@ void Benchmark::DoWrite(ThreadState* thread, WriteMode write_mode) {
     Slice val = "0000000000";
 
     batch.Put(key, val);
+    current_fill_num++;
+    if (current_fill_num > 312) {
+      s = db_with_cfh->db->Write(write_options_, &batch);
+      current_fill_num = 0;
+    }
 
     batch_bytes += val.size() + key_size_;
     bytes += val.size() + key_size_;
     ++num_written;
-
-    if (thread->shared->write_rate_limiter.get() != nullptr) {
-      thread->shared->write_rate_limiter->Request(batch_bytes, Env::IO_HIGH,
-                                                  nullptr /* stats */,
-                                                  RateLimiter::OpType::kWrite);
-      // Set time at which last op finished to Now() to hide latency and
-      // sleep from rate limiter. Also, do the check once per batch, not
-      // once per write.
-      thread->stats.ResetLastOpTime();
-    }
-
-    s = db_with_cfh->db->Write(write_options_, &batch);
+    //
+    //    if (thread->shared->write_rate_limiter.get() != nullptr) {
+    //      thread->shared->write_rate_limiter->Request(batch_bytes,
+    //      Env::IO_HIGH,
+    //                                                  nullptr /* stats */,
+    //                                                  RateLimiter::OpType::kWrite);
+    //      // Set time at which last op finished to Now() to hide latency and
+    //      // sleep from rate limiter. Also, do the check once per batch, not
+    //      // once per write.
+    //      thread->stats.ResetLastOpTime();
+    //    }
 
     thread->stats.FinishedOps(db_with_cfh, db_with_cfh->db, 1, kWrite);
   }

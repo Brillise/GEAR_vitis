@@ -6,10 +6,9 @@ namespace ROCKSDB_NAMESPACE {
 
 HW::HW() {
 #ifdef HARDWARE
-  std::string binaryPath =
-      "/home/sunny/Documents/new_compaction/vitis_prj/vitis_compaction_meta/";
+  std::string binaryPath = "/home/centos/Documents/vitis_compaction_meta/";
   std::string binaryFileName =
-      binaryPath + "compaction/Hardware/compaction_meta.xclbin";
+      binaryPath + "compaction/Hardware/compaction_meta.awsxclbin";
 #ifndef EMU
   init_device(context, q, krnl_compact, binaryFileName, err);
 #endif
@@ -146,12 +145,12 @@ void HW::run_compaction_post() {
 #endif
 
 #ifdef TransTime
-  uint64_t end_micros = env_hw->NowCPUNanos() / 1000 - start_micros;
+  uint64_t end_micros = env_hw->NowMicros() - start_micros;
   float throughput_MBs = (float)cl_output_size / end_micros;
   total_micros += end_micros;
   printf("time                %.2f ms\n", end_micros / 1000.0);
   printf("throughput          %.2f MB/s\n", throughput_MBs);
-  printf("total_time          %.3f ms\n", total_micros / 1000.0);
+  printf("total_time          %.2f ms\n", total_micros / 1000.0);
 #endif
 
 #ifdef HWdebug
