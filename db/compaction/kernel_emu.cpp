@@ -85,8 +85,6 @@ void key_merge_drop(hls::stream<my_key_t> &inKeyStream0,
 
 compare_loop:
   for (ap_uint<2> cur = 0x3; cur > 0;) {
-// #pragma HLS LATENCY min = 4
-// #pragma HLS LATENCY max = 4
 #pragma HLS PIPELINE II = 1
     bool path = 0;
 
@@ -175,8 +173,6 @@ void key_merge(hls::stream<my_key_t> &inKeyStream0,
 
 compare_loop:
   for (ap_uint<2> cur = 0x3; cur > 0;) {
-// #pragma HLS LATENCY min = 4
-// #pragma HLS LATENCY max = 4
 #pragma HLS PIPELINE II = 1
     bool path = 0;
 
@@ -288,7 +284,7 @@ void gmem_to_stream(uint32_t block_num, uint512_t *in,
         if (j < key_size_512) {
           inKeyStream512 << buf0[BLOCK_SIZE_512 - 1 - j];
         } else {
-          inValueStream512 << buf0[j - BURST_KEY_SIZE_512 + 1];
+          inValueStream512 << buf0[j - key_size_512 + 1];
         }
       }
     } else {
@@ -306,7 +302,7 @@ void gmem_to_stream(uint32_t block_num, uint512_t *in,
         if (j < key_size_512) {
           inKeyStream512 << buf1[BLOCK_SIZE_512 - 1 - j];
         } else {
-          inValueStream512 << buf1[j - BURST_KEY_SIZE_512 + 1];
+          inValueStream512 << buf1[j - key_size_512 + 1];
         }
       }
     }
@@ -478,6 +474,32 @@ void value_merge_drop(hls::stream<value_t> &inValueStream0,
     }
 
     bitmap = pathDropFlag.read();
+  }
+}
+
+void value_merge(hls::stream<value_t> &inValueStream0,
+                 hls::stream<value_t> &inValueStream1,
+                 hls::stream<vint2_t> &pathFlag,
+                 hls::stream<value_t> &valueStream) {
+  value_t inValue;
+
+  vint2_t bitmap = pathFlag.read();
+  for (; bitmap != 0x3;) {
+#pragma HLS PIPELINE II = 1
+    bool path = bitmap(0, 0);
+
+    switch (path) {
+      case 0:
+        inValue = inValueStream0.read();
+        break;
+      case 1:
+        inValue = inValueStream1.read();
+        break;
+    }
+
+    valueStream << inValue;
+
+    bitmap = pathFlag.read();
   }
 }
 
@@ -690,29 +712,49 @@ void stream_to_gmem(uint32_t block_num, hls::stream<uint512_t> &outKeyStream,
 }
 
 void compaction_emu(uint512_t *in0, uint512_t *in1, uint512_t *in2,
-                    uint512_t *in3, uint512_t *out, uint32_t block_num0,
-                    uint32_t block_num1, uint32_t block_num2,
-                    uint32_t block_num3, uint64_t smallest_snapshot_c)
-
-{
+                    uint512_t *in3, uint512_t *in4, uint512_t *in5,
+                    uint512_t *in6, uint512_t *in7, uint512_t *out,
+                    uint32_t block_num0, uint32_t block_num1,
+                    uint32_t block_num2, uint32_t block_num3,
+                    uint32_t block_num4, uint32_t block_num5,
+                    uint32_t block_num6, uint32_t block_num7,
+                    uint64_t smallest_snapshot_c) {
 #pragma HLS INTERFACE m_axi depth = 12800 port = in0 offset = slave bundle = \
     gmem0
 #pragma HLS INTERFACE m_axi depth = 12800 port = in1 offset = slave bundle = \
     gmem1
-#pragma HLS INTERFACE m_axi depth = 1 port = in2 offset = slave bundle = gmem2
-#pragma HLS INTERFACE m_axi depth = 1 port = in3 offset = slave bundle = gmem3
-#pragma HLS INTERFACE m_axi depth = 25601 port = out offset = slave bundle = \
+#pragma HLS INTERFACE m_axi depth = 12800 port = in2 offset = slave bundle = \
+    gmem2
+#pragma HLS INTERFACE m_axi depth = 12800 port = in3 offset = slave bundle = \
+    gmem3
+#pragma HLS INTERFACE m_axi depth = 12800 port = in4 offset = slave bundle = \
+    gmem4
+#pragma HLS INTERFACE m_axi depth = 12800 port = in5 offset = slave bundle = \
+    gmem5
+#pragma HLS INTERFACE m_axi depth = 12800 port = in6 offset = slave bundle = \
+    gmem6
+#pragma HLS INTERFACE m_axi depth = 12800 port = in7 offset = slave bundle = \
+    gmem7
+#pragma HLS INTERFACE m_axi depth = 102401 port = out offset = slave bundle = \
     gmem8
 
 #pragma HLS INTERFACE s_axilite port = in0 bundle = control
 #pragma HLS INTERFACE s_axilite port = in1 bundle = control
 #pragma HLS INTERFACE s_axilite port = in2 bundle = control
 #pragma HLS INTERFACE s_axilite port = in3 bundle = control
+#pragma HLS INTERFACE s_axilite port = in4 bundle = control
+#pragma HLS INTERFACE s_axilite port = in5 bundle = control
+#pragma HLS INTERFACE s_axilite port = in6 bundle = control
+#pragma HLS INTERFACE s_axilite port = in7 bundle = control
 #pragma HLS INTERFACE s_axilite port = out bundle = control
 #pragma HLS INTERFACE s_axilite port = block_num0 bundle = control
 #pragma HLS INTERFACE s_axilite port = block_num1 bundle = control
 #pragma HLS INTERFACE s_axilite port = block_num2 bundle = control
 #pragma HLS INTERFACE s_axilite port = block_num3 bundle = control
+#pragma HLS INTERFACE s_axilite port = block_num4 bundle = control
+#pragma HLS INTERFACE s_axilite port = block_num5 bundle = control
+#pragma HLS INTERFACE s_axilite port = block_num6 bundle = control
+#pragma HLS INTERFACE s_axilite port = block_num7 bundle = control
 #pragma HLS INTERFACE s_axilite port = smallest_snapshot_c bundle = control
 #pragma HLS INTERFACE s_axilite port = return bundle = control
 
@@ -720,26 +762,54 @@ void compaction_emu(uint512_t *in0, uint512_t *in1, uint512_t *in2,
   hls::stream<uint512_t> inKeyStream512_1("inKeyStream512_1");
   hls::stream<uint512_t> inKeyStream512_2("inKeyStream512_2");
   hls::stream<uint512_t> inKeyStream512_3("inKeyStream512_3");
+  hls::stream<uint512_t> inKeyStream512_4("inKeyStream512_4");
+  hls::stream<uint512_t> inKeyStream512_5("inKeyStream512_5");
+  hls::stream<uint512_t> inKeyStream512_6("inKeyStream512_6");
+  hls::stream<uint512_t> inKeyStream512_7("inKeyStream512_7");
   hls::stream<uint512_t> inValueStream512_0("inValueStream512_0");
   hls::stream<uint512_t> inValueStream512_1("inValueStream512_1");
   hls::stream<uint512_t> inValueStream512_2("inValueStream512_2");
   hls::stream<uint512_t> inValueStream512_3("inValueStream512_3");
+  hls::stream<uint512_t> inValueStream512_4("inValueStream512_4");
+  hls::stream<uint512_t> inValueStream512_5("inValueStream512_5");
+  hls::stream<uint512_t> inValueStream512_6("inValueStream512_6");
+  hls::stream<uint512_t> inValueStream512_7("inValueStream512_7");
   hls::stream<my_key_t> inKeyStream0("inKeyStream0");
   hls::stream<my_key_t> inKeyStream1("inKeyStream1");
   hls::stream<my_key_t> inKeyStream2("inKeyStream2");
   hls::stream<my_key_t> inKeyStream3("inKeyStream3");
+  hls::stream<my_key_t> inKeyStream4("inKeyStream4");
+  hls::stream<my_key_t> inKeyStream5("inKeyStream5");
+  hls::stream<my_key_t> inKeyStream6("inKeyStream6");
+  hls::stream<my_key_t> inKeyStream7("inKeyStream7");
   hls::stream<value_t> inValueStream0("inValueStream0");
   hls::stream<value_t> inValueStream1("inValueStream1");
   hls::stream<value_t> inValueStream2("inValueStream2");
   hls::stream<value_t> inValueStream3("inValueStream3");
+  hls::stream<value_t> inValueStream4("inValueStream4");
+  hls::stream<value_t> inValueStream5("inValueStream5");
+  hls::stream<value_t> inValueStream6("inValueStream6");
+  hls::stream<value_t> inValueStream7("inValueStream7");
   hls::stream<my_key_t> keyStream_00("keyStream_00");
   hls::stream<my_key_t> keyStream_01("keyStream_01");
+  hls::stream<my_key_t> keyStream_02("keyStream_02");
+  hls::stream<my_key_t> keyStream_03("keyStream_03");
+  hls::stream<my_key_t> keyStream_10("keyStream_10");
+  hls::stream<my_key_t> keyStream_11("keyStream_11");
   hls::stream<my_key_t> keyStream("keyStream");
   hls::stream<vint3_t> pathDropFlag0("pathDropFlag0");
   hls::stream<vint3_t> pathDropFlag1("pathDropFlag1");
+  hls::stream<vint3_t> pathDropFlag2("pathDropFlag2");
+  hls::stream<vint3_t> pathDropFlag3("pathDropFlag3");
+  hls::stream<vint2_t> pathFlag_00("pathFlag_00");
+  hls::stream<vint2_t> pathFlag_01("pathFlag_01");
   hls::stream<vint2_t> pathFlag("pathFlag");
   hls::stream<value_t> valueStream_00("valueStream_00");
   hls::stream<value_t> valueStream_01("valueStream_01");
+  hls::stream<value_t> valueStream_02("valueStream_02");
+  hls::stream<value_t> valueStream_03("valueStream_03");
+  hls::stream<value_t> valueStream_10("valueStream_10");
+  hls::stream<value_t> valueStream_11("valueStream_11");
   hls::stream<value_t> valueStream("valueStream");
   hls::stream<bool> valueFlag("valueFlag");
   hls::stream<uint512_t> outKeyStream("outKeyStream");
@@ -750,26 +820,54 @@ void compaction_emu(uint512_t *in0, uint512_t *in1, uint512_t *in2,
 #pragma HLS STREAM variable = inKeyStream512_1 depth = 128
 #pragma HLS STREAM variable = inKeyStream512_2 depth = 128
 #pragma HLS STREAM variable = inKeyStream512_3 depth = 128
+#pragma HLS STREAM variable = inKeyStream512_4 depth = 128
+#pragma HLS STREAM variable = inKeyStream512_5 depth = 128
+#pragma HLS STREAM variable = inKeyStream512_6 depth = 128
+#pragma HLS STREAM variable = inKeyStream512_7 depth = 128
 #pragma HLS STREAM variable = inValueStream512_0 depth = 128
 #pragma HLS STREAM variable = inValueStream512_1 depth = 128
 #pragma HLS STREAM variable = inValueStream512_2 depth = 128
 #pragma HLS STREAM variable = inValueStream512_3 depth = 128
+#pragma HLS STREAM variable = inValueStream512_4 depth = 128
+#pragma HLS STREAM variable = inValueStream512_5 depth = 128
+#pragma HLS STREAM variable = inValueStream512_6 depth = 128
+#pragma HLS STREAM variable = inValueStream512_7 depth = 128
 #pragma HLS STREAM variable = inKeyStream0 depth = 128
 #pragma HLS STREAM variable = inKeyStream1 depth = 128
 #pragma HLS STREAM variable = inKeyStream2 depth = 128
 #pragma HLS STREAM variable = inKeyStream3 depth = 128
+#pragma HLS STREAM variable = inKeyStream4 depth = 128
+#pragma HLS STREAM variable = inKeyStream5 depth = 128
+#pragma HLS STREAM variable = inKeyStream6 depth = 128
+#pragma HLS STREAM variable = inKeyStream7 depth = 128
 #pragma HLS STREAM variable = inValueStream0 depth = 128
 #pragma HLS STREAM variable = inValueStream1 depth = 128
 #pragma HLS STREAM variable = inValueStream2 depth = 128
 #pragma HLS STREAM variable = inValueStream3 depth = 128
+#pragma HLS STREAM variable = inValueStream4 depth = 128
+#pragma HLS STREAM variable = inValueStream5 depth = 128
+#pragma HLS STREAM variable = inValueStream6 depth = 128
+#pragma HLS STREAM variable = inValueStream7 depth = 128
 #pragma HLS STREAM variable = keyStream_00 depth = 128
 #pragma HLS STREAM variable = keyStream_01 depth = 128
+#pragma HLS STREAM variable = keyStream_02 depth = 128
+#pragma HLS STREAM variable = keyStream_03 depth = 128
+#pragma HLS STREAM variable = keyStream_10 depth = 128
+#pragma HLS STREAM variable = keyStream_11 depth = 128
 #pragma HLS STREAM variable = keyStream depth = 128
 #pragma HLS STREAM variable = pathDropFlag0 depth = 128
 #pragma HLS STREAM variable = pathDropFlag1 depth = 128
+#pragma HLS STREAM variable = pathDropFlag2 depth = 128
+#pragma HLS STREAM variable = pathDropFlag3 depth = 128
+#pragma HLS STREAM variable = pathFlag_00 depth = 128
+#pragma HLS STREAM variable = pathFlag_01 depth = 128
 #pragma HLS STREAM variable = pathFlag depth = 128
 #pragma HLS STREAM variable = valueStream_00 depth = 128
 #pragma HLS STREAM variable = valueStream_01 depth = 128
+#pragma HLS STREAM variable = valueStream_02 depth = 128
+#pragma HLS STREAM variable = valueStream_03 depth = 128
+#pragma HLS STREAM variable = valueStream_10 depth = 128
+#pragma HLS STREAM variable = valueStream_11 depth = 128
 #pragma HLS STREAM variable = valueStream depth = 128
 #pragma HLS STREAM variable = valueFlag depth = 128
 #pragma HLS STREAM variable = outKeyStream depth = 128
@@ -778,29 +876,52 @@ void compaction_emu(uint512_t *in0, uint512_t *in1, uint512_t *in2,
 
 #pragma HLS DATAFLOW
   smallest_snapshot = smallest_snapshot_c;
-  uint32_t block_num_sum = block_num0 + block_num1 + block_num2 + block_num3;
+  uint32_t block_num_sum = block_num0 + block_num1 + block_num2 + block_num3 +
+                           block_num4 + block_num5 + block_num6 + block_num7;
 
   gmem_to_stream(block_num0, in0, inKeyStream512_0, inValueStream512_0);
   gmem_to_stream(block_num1, in1, inKeyStream512_1, inValueStream512_1);
   gmem_to_stream(block_num2, in2, inKeyStream512_2, inValueStream512_2);
   gmem_to_stream(block_num3, in3, inKeyStream512_3, inValueStream512_3);
+  gmem_to_stream(block_num4, in4, inKeyStream512_4, inValueStream512_4);
+  gmem_to_stream(block_num5, in5, inKeyStream512_5, inValueStream512_5);
+  gmem_to_stream(block_num6, in6, inKeyStream512_6, inValueStream512_6);
+  gmem_to_stream(block_num7, in7, inKeyStream512_7, inValueStream512_7);
   key512_to_key(block_num0, inKeyStream512_0, inKeyStream0);
   key512_to_key(block_num1, inKeyStream512_1, inKeyStream1);
   key512_to_key(block_num2, inKeyStream512_2, inKeyStream2);
   key512_to_key(block_num3, inKeyStream512_3, inKeyStream3);
+  key512_to_key(block_num4, inKeyStream512_4, inKeyStream4);
+  key512_to_key(block_num5, inKeyStream512_5, inKeyStream5);
+  key512_to_key(block_num6, inKeyStream512_6, inKeyStream6);
+  key512_to_key(block_num7, inKeyStream512_7, inKeyStream7);
   key_merge_drop(inKeyStream0, inKeyStream1, keyStream_00, pathDropFlag0);
   key_merge_drop(inKeyStream2, inKeyStream3, keyStream_01, pathDropFlag1);
-  key_merge(keyStream_00, keyStream_01, keyStream, pathFlag);
+  key_merge_drop(inKeyStream4, inKeyStream5, keyStream_02, pathDropFlag2);
+  key_merge_drop(inKeyStream6, inKeyStream7, keyStream_03, pathDropFlag3);
+  key_merge(keyStream_00, keyStream_01, keyStream_10, pathFlag_00);
+  key_merge(keyStream_02, keyStream_03, keyStream_11, pathFlag_01);
+  key_merge(keyStream_10, keyStream_11, keyStream, pathFlag);
   key_to_key512(keyStream, outKeyStream, outKeyFlag);
   value512_to_value(block_num0, inValueStream512_0, inValueStream0);
   value512_to_value(block_num1, inValueStream512_1, inValueStream1);
   value512_to_value(block_num2, inValueStream512_2, inValueStream2);
   value512_to_value(block_num3, inValueStream512_3, inValueStream3);
+  value512_to_value(block_num4, inValueStream512_4, inValueStream4);
+  value512_to_value(block_num5, inValueStream512_5, inValueStream5);
+  value512_to_value(block_num6, inValueStream512_6, inValueStream6);
+  value512_to_value(block_num7, inValueStream512_7, inValueStream7);
   value_merge_drop(inValueStream0, inValueStream1, pathDropFlag0,
                    valueStream_00);
   value_merge_drop(inValueStream2, inValueStream3, pathDropFlag1,
                    valueStream_01);
-  value_merge_last(valueStream_00, valueStream_01, pathFlag, valueStream,
+  value_merge_drop(inValueStream4, inValueStream5, pathDropFlag2,
+                   valueStream_02);
+  value_merge_drop(inValueStream6, inValueStream7, pathDropFlag3,
+                   valueStream_03);
+  value_merge(valueStream_00, valueStream_01, pathFlag_00, valueStream_10);
+  value_merge(valueStream_02, valueStream_03, pathFlag_01, valueStream_11);
+  value_merge_last(valueStream_10, valueStream_11, pathFlag, valueStream,
                    valueFlag);
   value_to_value512(valueStream, valueFlag, outValueStream);
   stream_to_gmem(block_num_sum, outKeyStream, outKeyFlag, outValueStream, out);

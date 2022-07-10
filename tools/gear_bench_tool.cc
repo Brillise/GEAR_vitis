@@ -174,7 +174,7 @@ void ConfigByGFLAGS(Options& opt) {
   opt.write_buffer_size = memtable_size * 2;
   //      FLAGS_write_buffer_size * (FLAGS_key_size + FLAGS_value_size);
   opt.target_file_size_base = sst_size;
-  opt.level0_file_num_compaction_trigger = 4;
+  opt.level0_file_num_compaction_trigger = NumInput;
   //      FLAGS_target_file_size_base * (FLAGS_key_size + FLAGS_value_size);
   opt.max_background_jobs = FLAGS_max_background_compactions + 1;
   opt.index_dir_prefix = FLAGS_index_dir_prefix;

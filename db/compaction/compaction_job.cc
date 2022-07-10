@@ -989,6 +989,9 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
 
       SST_size = BLOCK_SIZE * SST_block_num;
       char* output_buf = static_cast<char*>(malloc(SST_size));
+      if (output_buf == NULL) {
+        printf("malloc file output buffer failed\n");
+      }
 #ifdef EMU
       memcpy(output_buf, &hw_->output_buf_ptr[1 + i * SST_SIZE / 64], SST_size);
 #else

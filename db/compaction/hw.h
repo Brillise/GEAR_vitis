@@ -19,7 +19,7 @@
 #define HARDWARE
 #define TransTime
 #define HWdebug
-#define EMU
+//#define EMU
 
 #ifdef EMU
 #include "db/compaction/kernel_emu.h"
@@ -42,8 +42,8 @@ class HW {
 
  private:
   uint32_t input_block_num[NumInput];
-  uint32_t cl_input_size[NumInput];
-  uint32_t cl_output_size = 64;  // first 64 bytes for output results meta
+  uint64_t cl_input_size[NumInput];
+  uint64_t cl_output_size = 64;  // first 64 bytes for output results meta
 
 #ifdef EMU
   uint512_t *input_buf_ptr[NumInput] = {NULL};
@@ -52,6 +52,10 @@ class HW {
   std::vector<int, aligned_allocator<int> > input_buf_ptr1;
   std::vector<int, aligned_allocator<int> > input_buf_ptr2;
   std::vector<int, aligned_allocator<int> > input_buf_ptr3;
+  std::vector<int, aligned_allocator<int> > input_buf_ptr4;
+  std::vector<int, aligned_allocator<int> > input_buf_ptr5;
+  std::vector<int, aligned_allocator<int> > input_buf_ptr6;
+  std::vector<int, aligned_allocator<int> > input_buf_ptr7;
 #endif
 
   cl_int err;

@@ -65,9 +65,11 @@ void HW::InitInputFileSimple(std::vector<std::string> dbname, int input_num,
   }
 
   compaction_emu(input_buf_ptr[0], input_buf_ptr[1], input_buf_ptr[2],
-                 input_buf_ptr[3], output_buf_ptr, input_block_num[0],
-                 input_block_num[1], input_block_num[2], input_block_num[3],
-                 smallest_snapshot);
+                 input_buf_ptr[3], input_buf_ptr[4], input_buf_ptr[5],
+                 input_buf_ptr[6], input_buf_ptr[7], output_buf_ptr,
+                 input_block_num[0], input_block_num[1], input_block_num[2],
+                 input_block_num[3], input_block_num[4], input_block_num[5],
+                 input_block_num[6], input_block_num[7], smallest_snapshot);
 #else
   FILE *pFile[NumInput] = {NULL};
   for (int i = 0; i < NumInput; i++) {
@@ -97,6 +99,10 @@ void HW::InitInputFileSimple(std::vector<std::string> dbname, int input_num,
   input_buf_ptr1.resize(cl_input_size[1] / 4);
   input_buf_ptr2.resize(cl_input_size[2] / 4);
   input_buf_ptr3.resize(cl_input_size[3] / 4);
+  input_buf_ptr4.resize(cl_input_size[4] / 4);
+  input_buf_ptr5.resize(cl_input_size[5] / 4);
+  input_buf_ptr6.resize(cl_input_size[6] / 4);
+  input_buf_ptr7.resize(cl_input_size[7] / 4);
 
   if (input_num >= 2) {
     fread(input_buf_ptr0.data(), 1, cl_input_size[0], pFile[0]);
@@ -105,8 +111,20 @@ void HW::InitInputFileSimple(std::vector<std::string> dbname, int input_num,
   if (input_num >= 3) {
     fread(input_buf_ptr2.data(), 1, cl_input_size[2], pFile[2]);
   }
-  if (input_num == 4) {
+  if (input_num >= 4) {
     fread(input_buf_ptr3.data(), 1, cl_input_size[3], pFile[3]);
+  }
+  if (input_num >= 5) {
+    fread(input_buf_ptr4.data(), 1, cl_input_size[4], pFile[4]);
+  }
+  if (input_num >= 6) {
+    fread(input_buf_ptr5.data(), 1, cl_input_size[5], pFile[5]);
+  }
+  if (input_num >= 7) {
+    fread(input_buf_ptr6.data(), 1, cl_input_size[6], pFile[6]);
+  }
+  if (input_num == 8) {
+    fread(input_buf_ptr7.data(), 1, cl_input_size[7], pFile[7]);
   }
 
   for (int i = 0; i < input_num; i++) {
@@ -136,6 +154,18 @@ void HW::InitInputFileSimple(std::vector<std::string> dbname, int input_num,
   in_data_Ext[3].flags = XCL_MEM_DDR_BANK0;
   in_data_Ext[3].obj = input_buf_ptr3.data();
   in_data_Ext[3].param = 0;
+  in_data_Ext[4].flags = XCL_MEM_DDR_BANK0;
+  in_data_Ext[4].obj = input_buf_ptr4.data();
+  in_data_Ext[4].param = 0;
+  in_data_Ext[5].flags = XCL_MEM_DDR_BANK0;
+  in_data_Ext[5].obj = input_buf_ptr5.data();
+  in_data_Ext[5].param = 0;
+  in_data_Ext[6].flags = XCL_MEM_DDR_BANK0;
+  in_data_Ext[6].obj = input_buf_ptr6.data();
+  in_data_Ext[6].param = 0;
+  in_data_Ext[7].flags = XCL_MEM_DDR_BANK0;
+  in_data_Ext[7].obj = input_buf_ptr7.data();
+  in_data_Ext[7].param = 0;
   out_data_Ext.flags = XCL_MEM_DDR_BANK1;
   out_data_Ext.obj = output_buf_ptr.data();
   out_data_Ext.param = 0;
@@ -160,6 +190,26 @@ void HW::InitInputFileSimple(std::vector<std::string> dbname, int input_num,
                 context,
                 CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR | CL_MEM_EXT_PTR_XILINX,
                 cl_input_size[3], &in_data_Ext[3], &err));
+  OCL_CHECK(err,
+            cl::Buffer buffer_in4(
+                context,
+                CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR | CL_MEM_EXT_PTR_XILINX,
+                cl_input_size[4], &in_data_Ext[4], &err));
+  OCL_CHECK(err,
+            cl::Buffer buffer_in5(
+                context,
+                CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR | CL_MEM_EXT_PTR_XILINX,
+                cl_input_size[5], &in_data_Ext[5], &err));
+  OCL_CHECK(err,
+            cl::Buffer buffer_in6(
+                context,
+                CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR | CL_MEM_EXT_PTR_XILINX,
+                cl_input_size[6], &in_data_Ext[6], &err));
+  OCL_CHECK(err,
+            cl::Buffer buffer_in7(
+                context,
+                CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR | CL_MEM_EXT_PTR_XILINX,
+                cl_input_size[7], &in_data_Ext[7], &err));
   OCL_CHECK(err, cl::Buffer buffer_out(context,
                                        CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR |
                                            CL_MEM_EXT_PTR_XILINX,
@@ -170,15 +220,24 @@ void HW::InitInputFileSimple(std::vector<std::string> dbname, int input_num,
   OCL_CHECK(err, err = krnl_compact.setArg(narg++, buffer_in1));
   OCL_CHECK(err, err = krnl_compact.setArg(narg++, buffer_in2));
   OCL_CHECK(err, err = krnl_compact.setArg(narg++, buffer_in3));
+  OCL_CHECK(err, err = krnl_compact.setArg(narg++, buffer_in4));
+  OCL_CHECK(err, err = krnl_compact.setArg(narg++, buffer_in5));
+  OCL_CHECK(err, err = krnl_compact.setArg(narg++, buffer_in6));
+  OCL_CHECK(err, err = krnl_compact.setArg(narg++, buffer_in7));
   OCL_CHECK(err, err = krnl_compact.setArg(narg++, buffer_out));
   OCL_CHECK(err, err = krnl_compact.setArg(narg++, input_block_num[0]));
   OCL_CHECK(err, err = krnl_compact.setArg(narg++, input_block_num[1]));
   OCL_CHECK(err, err = krnl_compact.setArg(narg++, input_block_num[2]));
   OCL_CHECK(err, err = krnl_compact.setArg(narg++, input_block_num[3]));
+  OCL_CHECK(err, err = krnl_compact.setArg(narg++, input_block_num[4]));
+  OCL_CHECK(err, err = krnl_compact.setArg(narg++, input_block_num[5]));
+  OCL_CHECK(err, err = krnl_compact.setArg(narg++, input_block_num[6]));
+  OCL_CHECK(err, err = krnl_compact.setArg(narg++, input_block_num[7]));
   OCL_CHECK(err, err = krnl_compact.setArg(narg++, smallest_snapshot));
   // Copy input data to device global memory
   OCL_CHECK(err, err = q.enqueueMigrateMemObjects(
-                     {buffer_in0, buffer_in1, buffer_in2, buffer_in3},
+                     {buffer_in0, buffer_in1, buffer_in2, buffer_in3,
+                      buffer_in4, buffer_in5, buffer_in6, buffer_in7},
                      0 /* 0 means from host*/));
 
   OCL_CHECK(err, err = q.enqueueTask(krnl_compact));

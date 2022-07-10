@@ -11,7 +11,7 @@
 
 #include "hls_stream.h"
 
-#define NumInput (4)
+#define NumInput (8)
 #define BLOCK_SIZE (8192)
 #define BLOCK_SIZE_512 (BLOCK_SIZE / 64)
 
@@ -32,5 +32,5 @@ typedef ap_uint<ValueWidth> value_t;
 typedef ap_uint<KeyWidth> my_key_t;
 typedef ap_uint<512> uint512_t;
 
-#define SST_SIZE ((1 << 30) - BLOCK_SIZE)
+#define SST_SIZE (100 * BLOCK_SIZE)
 #define SST_BLOCK_NUM (SST_SIZE / BLOCK_SIZE)
