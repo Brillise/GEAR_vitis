@@ -19,7 +19,7 @@
 #define HARDWARE
 #define TransTime
 #define HWdebug
-//#define EMU
+#define EMU
 
 #ifdef EMU
 #include "db/compaction/kernel_emu.h"

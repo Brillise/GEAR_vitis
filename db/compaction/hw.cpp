@@ -95,8 +95,8 @@ void HW::InitInputFileSimple(std::vector<std::string> dbname, int input_num,
 
   input_buf_ptr0.resize(cl_input_size[0] / 4);
   input_buf_ptr1.resize(cl_input_size[1] / 4);
-  input_buf_ptr0.resize(cl_input_size[2] / 4);
-  input_buf_ptr1.resize(cl_input_size[3] / 4);
+  input_buf_ptr2.resize(cl_input_size[2] / 4);
+  input_buf_ptr3.resize(cl_input_size[3] / 4);
 
   if (input_num >= 2) {
     fread(input_buf_ptr0.data(), 1, cl_input_size[0], pFile[0]);
