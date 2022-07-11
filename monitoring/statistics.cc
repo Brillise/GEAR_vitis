@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cinttypes>
 #include <cstdio>
+
 #include "port/likely.h"
 #include "rocksdb/statistics.h"
 
@@ -358,9 +359,9 @@ Status StatisticsImpl::Reset() {
 namespace {
 
 // a buffer size used for temp string buffers
-const int kTmpStrBufferSize = 200;
+const int kTmpStrBufferSize = 2048;
 
-} // namespace
+}  // namespace
 
 std::string StatisticsImpl::ToString() const {
   MutexLock lock(&aggregate_lock_);
@@ -388,7 +389,7 @@ std::string StatisticsImpl::ToString() const {
                  hData.percentile99, hData.max, hData.count, hData.sum);
     if (ret < 0 || ret >= kTmpStrBufferSize) {
       assert(false);
-      continue;
+      //      continue;
     }
     res.append(buffer);
   }

@@ -547,7 +547,7 @@ static bool Default_show_table_properties = false;
 static std::string Default_db = "";
 static class std::shared_ptr<ROCKSDB_NAMESPACE::Statistics> dbstats;
 static std::string Default_wal_dir = "";
-static int32_t Default_num_levels = 7;
+static int32_t Default_num_levels = 3;
 static int32_t Default_compression_level =
     ROCKSDB_NAMESPACE::CompressionOptions().level;
 static int32_t Default_compression_max_dict_bytes =
