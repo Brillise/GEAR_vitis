@@ -121,7 +121,7 @@ DEFINE_int64(bench_threads, 1, "number of working threads");
 DEFINE_int64(duration, 0, "Duration of Fill workloads");
 DEFINE_double(span_range, 1.0, "The overlapping range of ");
 DEFINE_double(min_value, 0, "The min  values of the key range");
-DEFINE_uint64(distinct_num, 120000000, "number of distinct entries");
+DEFINE_uint64(distinct_num, 1200000000, "number of distinct entries");
 DEFINE_uint64(existing_entries, 8000000000,
               "The number of entries inside existing database, this option "
               "will be ignored while use_existing_data is triggered");
@@ -133,6 +133,8 @@ DEFINE_int32(value_size, 10, "size of each value");
 // DB column settings
 DEFINE_int32(max_background_compactions, 1,
              "Number of concurrent threads to run.");
+DEFINE_uint64(write_batch_size, 312, "How many entries in each write batch");
+
 DEFINE_uint64(write_buffer_size, 312 * SST_BLOCK_NUM,
               "Size of Memtable, each flush will directly create a l2 small "
               "tree spanning in the entire key space");
@@ -174,7 +176,7 @@ void ConfigByGFLAGS(Options& opt) {
   opt.write_buffer_size = memtable_size * 2;
   //      FLAGS_write_buffer_size * (FLAGS_key_size + FLAGS_value_size);
   opt.target_file_size_base = sst_size;
-  opt.level0_file_num_compaction_trigger = NumInput;
+  opt.level0_file_num_compaction_trigger = 8;
   //      FLAGS_target_file_size_base * (FLAGS_key_size + FLAGS_value_size);
   opt.max_background_jobs = FLAGS_max_background_compactions + 1;
   opt.index_dir_prefix = FLAGS_index_dir_prefix;
@@ -370,7 +372,7 @@ void Benchmark::Run() {
     value_size_ = FLAGS_value_size;
     key_size_ = FLAGS_key_size;
     write_options_ = WriteOptions();
-    write_options_.disableWAL = false;
+    write_options_.disableWAL = true;
 
     void (Benchmark::*method)(ThreadState*) = nullptr;
     void (Benchmark::*post_process_method)() = nullptr;
@@ -482,10 +484,10 @@ void Benchmark::DoWrite(ThreadState* thread, WriteMode write_mode) {
 
   DBImpl* db_ptr = reinterpret_cast<DBImpl*>(db_.db);
 
+  int entries_per_batch_ = FLAGS_write_batch_size;
   int64_t stage = 0;
   int64_t num_written = 0;
-  int current_fill_num = 0;
-  while (!duration.Done(1)) {
+  while (!duration.Done(entries_per_batch_)) {
     if (duration.GetStage() != stage) {
       stage = duration.GetStage();
       if (db_.db != nullptr) {
@@ -498,20 +500,17 @@ void Benchmark::DoWrite(ThreadState* thread, WriteMode write_mode) {
     batch.Clear();
     int64_t batch_bytes = 0;
 
-    int64_t rand_num = key_gens[id]->Next();
-    key = key_gens[id]->GenerateKeyFromInt(rand_num);
-    Slice val = "0000000000";
-
-    batch.Put(key, val);
-    current_fill_num++;
-    if (current_fill_num > 20) {
-      s = db_with_cfh->db->Write(write_options_, &batch);
-      current_fill_num = 0;
+    for (int i = 0; i < entries_per_batch_; i++) {
+      int64_t rand_num = key_gens[id]->Next();
+      key = key_gens[id]->GenerateKeyFromInt(rand_num);
+      Slice val = "vvvvvvvvvv";
+      batch.Put(key, val);
+      batch_bytes += val.size() + key_size_;
+      bytes += val.size() + key_size_;
+      ++num_written;
     }
+    s = db_with_cfh->db->Write(write_options_, &batch);
 
-    batch_bytes += val.size() + key_size_;
-    bytes += val.size() + key_size_;
-    ++num_written;
     //
     //    if (thread->shared->write_rate_limiter.get() != nullptr) {
     //      thread->shared->write_rate_limiter->Request(batch_bytes,

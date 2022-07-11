@@ -32,5 +32,5 @@ typedef ap_uint<ValueWidth> value_t;
 typedef ap_uint<KeyWidth> my_key_t;
 typedef ap_uint<512> uint512_t;
 
-#define SST_SIZE (100 * BLOCK_SIZE)
+#define SST_SIZE (1 << 28)
 #define SST_BLOCK_NUM (SST_SIZE / BLOCK_SIZE)
