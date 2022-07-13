@@ -1034,9 +1034,7 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
         output_buf = NULL;
       }
     }
-#ifdef EMU
     hw_->free_resource();
-#endif
   } else
 #endif
   {

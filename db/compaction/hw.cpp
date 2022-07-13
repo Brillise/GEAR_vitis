@@ -270,6 +270,7 @@ void HW::run_compaction_post() {
 }
 
 void HW::free_resource() {
+#ifdef EMU
   for (int i = 0; i < NumInput; i++) {
     if (input_buf_ptr[i] != NULL) {
       free(input_buf_ptr[i]);
@@ -280,6 +281,7 @@ void HW::free_resource() {
     free(output_buf_ptr);
     output_buf_ptr = NULL;
   }
+#endif
   cl_output_size = 64;
 }
 
