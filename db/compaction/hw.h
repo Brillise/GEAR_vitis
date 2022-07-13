@@ -39,6 +39,7 @@ class HW {
   void InitInputFileSimple(std::vector<std::string> dbname, int input_num,
                            uint64_t smallest_snapshot);
   void run_compaction_post();
+  void free_resource();
 
  private:
   uint32_t input_block_num[NumInput];
