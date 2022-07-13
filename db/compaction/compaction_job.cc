@@ -993,10 +993,11 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
         printf("malloc file output buffer failed\n");
       }
 #ifdef EMU
-      memcpy(output_buf, &hw_->output_buf_ptr[1 + i * SST_SIZE / 64], SST_size);
-#else
-      memcpy(output_buf, &hw_->output_buf_ptr[(64 + i * SST_SIZE) / 4],
+      memcpy(output_buf, &hw_->output_buf_ptr[1 + i * (uint64_t)SST_SIZE / 64],
              SST_size);
+#else
+      memcpy(output_buf,
+             &hw_->output_buf_ptr[(64 + i * (uint64_t)SST_SIZE) / 4], SST_size);
 #endif
       uint32_t last_entry_count;
       sub_compact->builder->AddCharPack(output_buf, SST_size, last_entry_count);
