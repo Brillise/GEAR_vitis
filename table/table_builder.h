@@ -148,7 +148,11 @@ class TableBuilder {
   // REQUIRES: Finish(), Abandon() have not been called
   virtual void Add(const Slice& key, const Slice& value) = 0;
 
-  virtual void AddPack(const Slice& data_packs, uint32_t &last_entry_count) {
+  virtual void AddPack(const Slice& data_packs, uint32_t& last_entry_count) {
+    return;
+  };
+  virtual void AddCharPack(char* data_byte_array, uint32_t data_packs_size,
+                           uint32_t& last_entry_count) {
     return;
   };
 

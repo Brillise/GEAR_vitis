@@ -998,22 +998,21 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
       memcpy(output_buf, &hw_->output_buf_ptr[(64 + i * SST_SIZE) / 4],
              SST_size);
 #endif
-      Slice output(output_buf, SST_size);
       uint32_t last_entry_count;
-      sub_compact->builder->AddPack(output, last_entry_count);
+      sub_compact->builder->AddCharPack(output_buf, SST_size, last_entry_count);
       sub_compact->current_output_file_size =
           sub_compact->builder->EstimatedFileSize();
       sub_compact->num_output_records = sub_compact->builder->NumEntries();
 
       Slice smallest_key, largest_key, smallest_value, largest_value;
       ParsedInternalKey smallest, largest;
-      smallest_key = Slice(output.data() + BLOCK_SIZE - KeySize, KeySize);
-      largest_key = Slice(
-          output.data() + output.size() - last_entry_count * KeySize, KeySize);
-      smallest_value = Slice(output.data() + 64, ValueSize);
+      smallest_key = Slice(&output_buf[BLOCK_SIZE - KeySize], KeySize);
+      largest_key =
+          Slice(&output_buf[SST_size - last_entry_count * KeySize], KeySize);
+      smallest_value = Slice(&output_buf[64], ValueSize);
       largest_value =
-          Slice(output.data() + output.size() + 64 +
-                    last_entry_count * ValueSize - BLOCK_SIZE - ValueSize,
+          Slice(&output_buf[SST_size + 64 + last_entry_count * ValueSize -
+                            BLOCK_SIZE - ValueSize],
                 ValueSize);
       ParseInternalKey(smallest_key, &smallest);
       ParseInternalKey(largest_key, &largest);

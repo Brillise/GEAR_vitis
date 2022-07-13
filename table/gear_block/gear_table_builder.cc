@@ -315,5 +315,38 @@ void GearTableBuilder::AddPack(const Slice& data_packs,
   //  Finish();  //no need
 }
 
+void GearTableBuilder::AddCharPack(char* data_byte_array,
+                                   uint32_t data_packs_size,
+                                   uint32_t& last_entry_count) {
+  // This function can be only called from an empty builder
+  assert(properties_.num_entries == 0);
+  current_key_length = 0;
+  current_value_length = 0;
+  for (size_t i = 0; i < data_packs_size; i += 8 * 1024) {
+    // iterate from the first byte
+    Slice temp(data_byte_array + i, 8 * 1024);
+    io_status_ = file_->Append(temp);
+    // get the entry count from the file
+    properties_.num_data_blocks++;
+    uint32_t fixed_32_read_pos = 0;
+    GetFixed32(&temp, &fixed_32_read_pos);
+    GetFixed32(&temp, &page_entry_count);
+    last_entry_count = page_entry_count;
+    uint32_t key_length, value_length, placeholder_length = 0;
+    GetFixed32(&temp, &key_length);
+    GetFixed32(&temp, &value_length);
+    GetFixed32(&temp, &placeholder_length);
+    assert(key_length / 16 == page_entry_count &&
+           value_length / 10 == page_entry_count);
+    assert(64 + key_length + value_length + placeholder_length == 8 * 1024);
+    properties_.raw_key_size += key_length;
+    properties_.raw_value_size += value_length;
+    offset_ += 8 * 1024;
+    properties_.num_entries += page_entry_count;
+  }
+  io_status_ = file_->Flush();
+  //  Finish();  //no need
+}
+
 }  // namespace ROCKSDB_NAMESPACE
 #endif  // ROCKSDB_LITE
