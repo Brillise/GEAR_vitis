@@ -269,4 +269,18 @@ void HW::run_compaction_post() {
 #endif
 }
 
+void HW::free_resource() {
+  for (int i = 0; i < NumInput; i++) {
+    if (input_buf_ptr[i] != NULL) {
+      free(input_buf_ptr[i]);
+      input_buf_ptr[i] = NULL;
+    }
+  }
+  if (output_buf_ptr != NULL) {
+    free(output_buf_ptr);
+    output_buf_ptr = NULL;
+  }
+  cl_output_size = 64;
+}
+
 }  // namespace ROCKSDB_NAMESPACE

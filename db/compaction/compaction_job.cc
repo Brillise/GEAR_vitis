@@ -988,7 +988,7 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
       printf("out %d block num: %u\n", i, SST_block_num);
 
       SST_size = BLOCK_SIZE * SST_block_num;
-      char* output_buf = static_cast<char*>(malloc(SST_size));
+      char* output_buf = (char*)malloc(SST_size);
       if (output_buf == NULL) {
         printf("malloc file output buffer failed\n");
       }
@@ -1029,8 +1029,14 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
                                           &range_del_agg, &range_del_out_stats);
       RecordDroppedKeys(range_del_out_stats,
                         &sub_compact->compaction_job_stats);
-      free(output_buf);
+      if (output_buf != NULL) {
+        free(output_buf);
+        output_buf = NULL;
+      }
     }
+#ifdef EMU
+    hw_->free_resource();
+#endif
   } else
 #endif
   {
