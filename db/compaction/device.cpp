@@ -35,22 +35,4 @@ void init_device(cl::Context &context, cl::CommandQueue &q,
   }
 }
 
-cl_mem_ext_ptr_t get_buffer_extension(int ddr_no) {
-  cl_mem_ext_ptr_t ext;
-  switch (ddr_no) {
-    case 0:
-      ext.flags = XCL_MEM_DDR_BANK0;
-      break;
-    case 1:
-      ext.flags = XCL_MEM_DDR_BANK1;
-      break;
-    case 2:
-      ext.flags = XCL_MEM_DDR_BANK2;
-      break;
-    case 3:
-      ext.flags = XCL_MEM_DDR_BANK3;
-  };
-  return ext;
-}
-
 }  // namespace ROCKSDB_NAMESPACE

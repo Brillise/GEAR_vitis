@@ -15,7 +15,6 @@ HW::HW() {
 
 #ifdef TransTime
   env_hw = Env::Default();
-  total_micros = 0;
 #endif
 #endif
   printf("--- HW engine successfully initialized -------------------------\n");
@@ -258,10 +257,8 @@ void HW::run_compaction_post() {
 #ifdef TransTime
   uint64_t end_micros = env_hw->NowMicros() - start_micros;
   float throughput_MBs = (float)cl_output_size / end_micros;
-  total_micros += end_micros;
   printf("time                %.2f ms\n", end_micros / 1000.0);
   printf("throughput          %.2f MB/s\n", throughput_MBs);
-  printf("total_time          %.2f ms\n", total_micros / 1000.0);
 #endif
 
 #ifdef HWdebug
@@ -282,7 +279,7 @@ void HW::free_resource() {
     output_buf_ptr = NULL;
   }
 #endif
-  cl_output_size = 64;
+  cl_output_size = 0;
 }
 
 }  // namespace ROCKSDB_NAMESPACE

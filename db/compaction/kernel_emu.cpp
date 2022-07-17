@@ -579,7 +579,7 @@ void stream_to_gmem(uint32_t block_num, hls::stream<uint512_t> &outKeyStream,
   uint512_t buf0[BLOCK_SIZE_512];
   uint512_t buf1[BLOCK_SIZE_512];
   bool first_flag = 1;
-  uint32_t idx = 1;
+  uint32_t idx = 0;
   uint32_t block_id = 1;
   bool finished = 0;
   uint32_t entry_num = 0;
@@ -706,9 +706,7 @@ void stream_to_gmem(uint32_t block_num, hls::stream<uint512_t> &outKeyStream,
     }
   }
 
-  uint512_t out_header;
-  out_header(31, 0) = block_id;
-  out[0] = out_header;
+  out[0](511, 480) = block_id;
 }
 
 void compaction_emu(uint512_t *in0, uint512_t *in1, uint512_t *in2,
@@ -735,7 +733,7 @@ void compaction_emu(uint512_t *in0, uint512_t *in1, uint512_t *in2,
     gmem6
 #pragma HLS INTERFACE m_axi depth = 12800 port = in7 offset = slave bundle = \
     gmem7
-#pragma HLS INTERFACE m_axi depth = 102401 port = out offset = slave bundle = \
+#pragma HLS INTERFACE m_axi depth = 102400 port = out offset = slave bundle = \
     gmem8
 
 #pragma HLS INTERFACE s_axilite port = in0 bundle = control

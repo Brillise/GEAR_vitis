@@ -966,9 +966,9 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
 
 #ifdef EMU
     uint512_t output_header = hw_->output_buf_ptr[0];
-    uint32_t output_block_num = output_header(31, 0);
+    uint32_t output_block_num = output_header(511, 480);
 #else
-    uint32_t output_block_num = hw_->output_buf_ptr[0];
+    uint32_t output_block_num = hw_->output_buf_ptr[15];
 #endif
     printf("output block num: %u\n", output_block_num);
     int NumOutput = Align(output_block_num, SST_BLOCK_NUM);
@@ -993,11 +993,11 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
         printf("malloc file output buffer failed\n");
       }
 #ifdef EMU
-      memcpy(output_buf, &hw_->output_buf_ptr[1 + i * (uint64_t)SST_SIZE / 64],
+      memcpy(output_buf, &hw_->output_buf_ptr[i * (uint64_t)SST_SIZE / 64],
              SST_size);
 #else
-      memcpy(output_buf,
-             &hw_->output_buf_ptr[(64 + i * (uint64_t)SST_SIZE) / 4], SST_size);
+      memcpy(output_buf, &hw_->output_buf_ptr[i * (uint64_t)SST_SIZE / 4],
+             SST_size);
 #endif
       uint32_t last_entry_count;
       sub_compact->builder->AddCharPack(output_buf, SST_size, last_entry_count);

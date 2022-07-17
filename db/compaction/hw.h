@@ -27,9 +27,6 @@
 
 namespace ROCKSDB_NAMESPACE {
 
-#define MaxPathFileIn 16
-#define MaxPathFileOut 4
-
 class HW {
  public:
   HW();   // constructor
@@ -44,7 +41,7 @@ class HW {
  private:
   uint32_t input_block_num[NumInput];
   uint64_t cl_input_size[NumInput];
-  uint64_t cl_output_size = 64;  // first 64 bytes for output results meta
+  uint64_t cl_output_size = 0;  // first 64 bytes for output results meta
 
 #ifdef EMU
   uint512_t *input_buf_ptr[NumInput] = {NULL};
@@ -67,7 +64,6 @@ class HW {
 #ifdef TransTime
   Env *env_hw;
   uint64_t start_micros;
-  uint64_t total_micros;
 #endif
 
  public:

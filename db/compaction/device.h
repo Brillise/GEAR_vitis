@@ -23,12 +23,11 @@
 #include "rocksdb/rocksdb_namespace.h"
 
 namespace ROCKSDB_NAMESPACE {
+
 // Device Configuration Process
 void init_device(cl::Context &context, cl::CommandQueue &q,
                  cl::Kernel &krnl_compact, const std::string &binaryFileName,
                  cl_int &err);
 
-// Assigns Device Buffers with DDR
-cl_mem_ext_ptr_t get_buffer_extension(int ddr_no);
 }  // namespace ROCKSDB_NAMESPACE
 #endif
