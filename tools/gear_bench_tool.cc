@@ -121,7 +121,7 @@ DEFINE_int64(bench_threads, 1, "number of working threads");
 DEFINE_int64(duration, 0, "Duration of Fill workloads");
 DEFINE_double(span_range, 1.0, "The overlapping range of ");
 DEFINE_double(min_value, 0, "The min  values of the key range");
-DEFINE_uint64(distinct_num, 1200000000, "number of distinct entries");
+DEFINE_uint64(distinct_num, 50000000, "number of distinct entries");
 DEFINE_uint64(existing_entries, 8000000000,
               "The number of entries inside existing database, this option "
               "will be ignored while use_existing_data is triggered");

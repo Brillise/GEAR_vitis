@@ -29,5 +29,9 @@ void init_device(cl::Context &context, cl::CommandQueue &q,
                  cl::Kernel &krnl_compact, const std::string &binaryFileName,
                  cl_int &err);
 
+void event_cb(cl_event event1, cl_int cmd_status, void *data);
+
+void set_callback(cl::Event event, const char *queue_name);
+
 }  // namespace ROCKSDB_NAMESPACE
 #endif

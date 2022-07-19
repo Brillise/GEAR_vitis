@@ -941,7 +941,8 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
 #ifdef HARDWARE
   int input_num = sub_compact->compaction->num_input_files(
       sub_compact->compaction->start_level());
-  if (input_num >= 2 && input_num <= NumInput) {
+  if (input_num >= 2 && input_num <= 64) {
+    const uint64_t start_micros = env_->NowMicros();
     auto input_files =
         sub_compact->compaction->inputs(sub_compact->compaction->start_level());
     std::vector<std::string> input_name_packs;
@@ -961,17 +962,74 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
     } else {
       smallest_snapshot = existing_snapshots_.back();
     }
-    hw_->InitInputFileSimple(input_name_packs, input_num, smallest_snapshot);
-    hw_->run_compaction_post();
 
+    int iter = Align(input_num, NumInput);
 #ifdef EMU
-    uint512_t output_header = hw_->output_buf_ptr[0];
+    for (int iteration_idx = 0; iteration_idx < iter; iteration_idx++) {
+      int input_num_cur;
+      if (iteration_idx == iter - 1) {
+        input_num_cur = input_num - iteration_idx * NumInput;
+      } else
+        input_num_cur = NumInput;
+      hw_->compaction_emu(input_num_cur,
+                          &input_name_packs[iteration_idx * NumInput],
+                          smallest_snapshot, iteration_idx);
+    }
+    if (iter > 1) {
+      hw_->compaction_last_emu(iter, smallest_snapshot);
+    }
+
+    uint512_t* out_ptr_ptr;
+    if (iter > 1)
+      out_ptr_ptr = hw_->output_buf_ptr_last;
+    else
+      out_ptr_ptr = hw_->output_buf_ptr[0];
+    uint512_t output_header = out_ptr_ptr[0];
     uint32_t output_block_num = output_header(511, 480);
 #else
-    uint32_t output_block_num = hw_->output_buf_ptr[15];
+    bool single_left = false;
+    for (int iteration_idx = 0; iteration_idx < iter; iteration_idx++) {
+      int flag = iteration_idx % 2;
+      if (iteration_idx >= 2) {
+        hw_->read_events_wait(flag);
+        hw_->compaction_post(iteration_idx - 2);
+      }
+
+      int input_num_cur;
+      if (iteration_idx == iter - 1) {
+        input_num_cur = input_num - iteration_idx * NumInput;
+        if (input_num_cur == 1) {
+          single_left = true;
+          break;
+        }
+      } else
+        input_num_cur = NumInput;
+      hw_->compaction_pre(input_num_cur,
+                          &input_name_packs[iteration_idx * NumInput],
+                          smallest_snapshot, flag);
+    }
+    // Wait for all of the OpenCL operations to complete
+    hw_->first_stage_wait();
+
+    if (iter > 1) {
+      hw_->compaction_post(iter - 2);
+      if (single_left)
+        hw_->compaction_post_single(input_name_packs[input_num - 1], iter - 1);
+      else
+        hw_->compaction_post(iter - 1);
+      hw_->compaction_last(iter, smallest_snapshot);
+    } else
+      hw_->compaction_post(0);
+
+    std::vector<int, aligned_allocator<int> >* out_ptr_ptr;
+    if (iter > 1)
+      out_ptr_ptr = &hw_->output_buf_ptr_last;
+    else
+      out_ptr_ptr = &hw_->output_buf_ptr;
+    uint32_t output_block_num = *(out_ptr_ptr->data() + 15);
 #endif
-    printf("output block num: %u\n", output_block_num);
-    int NumOutput = Align(output_block_num, SST_BLOCK_NUM);
+    printf("\nlast output block num: %u\n", output_block_num);
+    uint32_t NumOutput = Align(output_block_num, SST_BLOCK_NUM);
     for (int i = 0; i < NumOutput; i++) {
       if (sub_compact->builder == nullptr) {
         status = OpenCompactionOutputFile(sub_compact);
@@ -985,7 +1043,7 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
         SST_block_num = output_block_num - i * SST_BLOCK_NUM;
       else
         SST_block_num = SST_BLOCK_NUM;
-      printf("out %d block num: %u\n", i, SST_block_num);
+      printf("last out %d block num: %u\n", i, SST_block_num);
 
       SST_size = BLOCK_SIZE * SST_block_num;
       char* output_buf = (char*)malloc(SST_size);
@@ -993,10 +1051,9 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
         printf("malloc file output buffer failed\n");
       }
 #ifdef EMU
-      memcpy(output_buf, &hw_->output_buf_ptr[i * (uint64_t)SST_SIZE / 64],
-             SST_size);
+      memcpy(output_buf, &out_ptr_ptr[i * (uint64_t)SST_SIZE / 64], SST_size);
 #else
-      memcpy(output_buf, &hw_->output_buf_ptr[i * (uint64_t)SST_SIZE / 4],
+      memcpy(output_buf, out_ptr_ptr->data() + i * (uint64_t)SST_SIZE / 4,
              SST_size);
 #endif
       uint32_t last_entry_count;
@@ -1035,6 +1092,7 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
         output_buf = NULL;
       }
     }
+    hw_->end_micros = env_->NowMicros() - start_micros;
     hw_->free_resource();
   } else
 #endif
