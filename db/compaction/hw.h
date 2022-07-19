@@ -17,7 +17,7 @@
 #include "rocksdb/rocksdb_namespace.h"
 
 #define HARDWARE
-//#define EMU
+#define EMU
 
 #ifdef EMU
 #include "db/compaction/kernel_emu.h"
@@ -49,7 +49,6 @@ class HW {
  private:
   uint64_t cl_output_offset = 0;
 #ifdef EMU
-  uint512_t *input_buf_ptr[NumInput] = {NULL};
   uint64_t tmp_output_size[NumInput] = {0};
 #else
   cl_int err;

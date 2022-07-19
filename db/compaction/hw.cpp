@@ -37,6 +37,7 @@ void HW::compaction_emu(int input_num, std::string *input_file_name,
                         uint64_t smallest_snapshot, int idx) {
   printf("\n");
   if (input_num > 1) {
+    uint512_t *input_buf_ptr[NumInput] = {NULL};
     uint32_t input_block_num[NumInput] = {0};
     uint64_t cl_input_size[NumInput] = {0};
     uint64_t cl_output_size = 0;
@@ -436,10 +437,6 @@ void HW::free_resource() {
   cl_output_offset = 0;
 #ifdef EMU
   for (int i = 0; i < NumInput; i++) {
-    if (input_buf_ptr[i] != NULL) {
-      free(input_buf_ptr[i]);
-      input_buf_ptr[i] = NULL;
-    }
     if (output_buf_ptr[i] != NULL) {
       free(output_buf_ptr[i]);
       output_buf_ptr[i] = NULL;
