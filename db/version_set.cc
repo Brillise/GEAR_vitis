@@ -4661,6 +4661,10 @@ Status VersionSet::Recover(
                                *cfd->GetLatestMutableCFOptions(),
                                current_version_number_++);
       s = builder->SaveTo(v->storage_info());
+      auto vfs = v->storage_info();
+      for (auto file : vfs->files_[2]) {
+        file->l2_position = VersionStorageInfo::l2_large_tree_index;
+      }
       if (!s.ok()) {
         delete v;
         return s;

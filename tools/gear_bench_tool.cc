@@ -372,7 +372,7 @@ void Benchmark::Run() {
     value_size_ = FLAGS_value_size;
     key_size_ = FLAGS_key_size;
     write_options_ = WriteOptions();
-    write_options_.disableWAL = true;
+    //    write_options_.disableWAL = true;
 
     void (Benchmark::*method)(ThreadState*) = nullptr;
     void (Benchmark::*post_process_method)() = nullptr;
@@ -487,7 +487,7 @@ void Benchmark::DoWrite(ThreadState* thread, WriteMode write_mode) {
   int entries_per_batch_ = FLAGS_write_batch_size;
   int64_t stage = 0;
   int64_t num_written = 0;
-  while (!duration.Done(entries_per_batch_)) {
+  while (!duration.Done(1)) {
     if (duration.GetStage() != stage) {
       stage = duration.GetStage();
       if (db_.db != nullptr) {
@@ -498,18 +498,15 @@ void Benchmark::DoWrite(ThreadState* thread, WriteMode write_mode) {
     size_t id = thread->rand.Next() % num_key_gens;
     DBWithColumnFamilies* db_with_cfh = &db_;
     batch.Clear();
-    int64_t batch_bytes = 0;
 
-    for (int i = 0; i < entries_per_batch_; i++) {
-      int64_t rand_num = key_gens[id]->Next();
-      key = key_gens[id]->GenerateKeyFromInt(rand_num);
-      Slice val = "vvvvvvvvvv";
-      batch.Put(key, val);
-      batch_bytes += val.size() + key_size_;
-      bytes += val.size() + key_size_;
-      ++num_written;
-    }
-    s = db_with_cfh->db->Write(write_options_, &batch);
+    int64_t rand_num = key_gens[id]->Next();
+    key = key_gens[id]->GenerateKeyFromInt(rand_num);
+    Slice val = "vvvvvvvvvv";
+    batch.Put(key, val);
+    bytes += 26;
+    ++num_written;
+    s = db_with_cfh->db->Put(write_options_, key, val);
+    //    s = db_with_cfh->db->Write(write_options_, &batch);
 
     //
     //    if (thread->shared->write_rate_limiter.get() != nullptr) {
