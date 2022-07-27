@@ -27,10 +27,16 @@ HW::HW() {
 #endif
 
 #endif
+  total_triggered = 0;
+  hw_triggered = 0;
   printf("--- HW engine successfully initialized -------------------------\n");
 }
 
-HW::~HW() { printf("--- HW shutdown-------------------------\n"); }
+HW::~HW() {
+  printf("total_triggered %llu  hw_triggered %llu\n", total_triggered,
+         hw_triggered);
+  printf("--- HW shutdown-------------------------\n");
+}
 
 #ifdef EMU
 void HW::compaction_emu(int input_num, std::string *input_file_name,
@@ -159,12 +165,14 @@ void HW::compaction_pre(int input_num, std::string *input_file_name,
     if (i < input_num) {
       pFile[i] = fopen(input_file_name[i].c_str(), "rb");
       if (pFile[i] == NULL) {
-        printf("open input file %d failed\n", i);
+        printf("open input file %d %s failed\n", i, input_file_name[i].c_str());
       }
       fseek(pFile[i], 0, SEEK_END);
       uint32_t file_size = ftell(pFile[i]);
       input_block_num[i] = file_size / BLOCK_SIZE;
+#ifdef HWdebug
       printf("input %d block num: %u\n", i, input_block_num[i]);
+#endif
       fseek(pFile[i], 0, SEEK_SET);
 
       cl_input_size[i] = input_block_num[i] * BLOCK_SIZE;
@@ -297,7 +305,9 @@ void HW::compaction_pre(int input_num, std::string *input_file_name,
 
 void HW::compaction_post(int idx) {
   uint32_t output_block_num = output_buf_ptr[tmp_output_offset[idx] + 15];
+#ifdef HWdebug
   printf("\noutput block num: %u\n", output_block_num);
+#endif
   tmp_output_offset[idx + 1] =
       tmp_output_offset[idx] + (uint64_t)BLOCK_SIZE * output_block_num / 4;
 }
@@ -311,7 +321,9 @@ void HW::compaction_post_single(std::string input_file_name, int idx) {
   fseek(pFile, 0, SEEK_END);
   uint32_t file_size = ftell(pFile);
   uint32_t input_block_num = file_size / BLOCK_SIZE;
+#ifdef HWdebug
   printf("input %d block num: %u\n", idx * NumInput, input_block_num);
+#endif
   fseek(pFile, 0, SEEK_SET);
   uint64_t cl_input_size = input_block_num * BLOCK_SIZE;
 
@@ -333,7 +345,9 @@ void HW::compaction_last(int input_num, uint64_t smallest_snapshot) {
     if (i < input_num) {
       cl_input_size[i] = (tmp_output_offset[i + 1] - tmp_output_offset[i]) * 4;
       input_block_num[i] = cl_input_size[i] / BLOCK_SIZE;
+#ifdef HWdebug
       printf("last input %d block num: %u\n", i, input_block_num[i]);
+#endif
       cl_output_size += cl_input_size[i];
     } else  // empty path
     {
@@ -434,6 +448,10 @@ void HW::first_stage_wait() {
 #endif
 
 void HW::free_resource() {
+  float throughput_MBs = (float)cl_output_offset / end_micros;
+  printf("time                %.2f ms\n", end_micros / 1000.0);
+  printf("throughput          %.2f MB/s\n", throughput_MBs);
+  end_micros = 0;
   cl_output_offset = 0;
 #ifdef EMU
   for (int i = 0; i < NumInput; i++) {
@@ -453,11 +471,7 @@ void HW::free_resource() {
     tmp_output_offset[i] = 0;
   }
   tmp_output_offset[NumInput] = 0;
-
 #endif
-  float throughput_MBs = (float)cl_output_offset / end_micros;
-  printf("time                %.2f ms\n", end_micros / 1000.0);
-  printf("throughput          %.2f MB/s\n", throughput_MBs);
   printf("end\n");
 }
 

@@ -16,8 +16,9 @@
 #include "rocksdb/env.h"
 #include "rocksdb/rocksdb_namespace.h"
 
-#define HARDWARE
-#define EMU
+//#define HARDWARE
+//#define HWdebug
+//#define EMU
 
 #ifdef EMU
 #include "db/compaction/kernel_emu.h"
@@ -79,6 +80,8 @@ class HW {
 #endif
 
  public:
+  uint64_t total_triggered = 0;
+  uint64_t hw_triggered = 0;
   uint64_t end_micros = 0;
 #ifdef EMU
   uint512_t *output_buf_ptr[NumInput] = {NULL};

@@ -941,7 +941,11 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
 #ifdef HARDWARE
   int input_num = sub_compact->compaction->num_input_files(
       sub_compact->compaction->start_level());
+  printf("input_num: %u\n", input_num);
+  hw_->total_triggered++;
   if (input_num >= 2 && input_num <= 64) {
+    hw_->hw_triggered++;
+    uint64_t post_micros = 0;
     const uint64_t start_micros = env_->NowMicros();
     auto input_files =
         sub_compact->compaction->inputs(sub_compact->compaction->start_level());
@@ -1028,8 +1032,8 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
       out_ptr_ptr = &hw_->output_buf_ptr;
     uint32_t output_block_num = *(out_ptr_ptr->data() + 15);
 #endif
-    printf("\nlast output block num: %u\n", output_block_num);
     uint32_t NumOutput = Align(output_block_num, SST_BLOCK_NUM);
+    printf("\nlast output file %u   block %u\n", NumOutput, output_block_num);
     for (int i = 0; i < NumOutput; i++) {
       if (sub_compact->builder == nullptr) {
         status = OpenCompactionOutputFile(sub_compact);
@@ -1043,7 +1047,9 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
         SST_block_num = output_block_num - i * SST_BLOCK_NUM;
       else
         SST_block_num = SST_BLOCK_NUM;
+#ifdef HWdebug
       printf("last out %d block num: %u\n", i, SST_block_num);
+#endif
 
       SST_size = BLOCK_SIZE * SST_block_num;
       char* output_buf = (char*)malloc(SST_size);
@@ -1055,6 +1061,9 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
 #else
       memcpy(output_buf, out_ptr_ptr->data() + i * (uint64_t)SST_SIZE / 4,
              SST_size);
+#endif
+#ifdef HWdebug
+      const uint64_t post_start_micros = env_->NowMicros();
 #endif
       uint32_t last_entry_count;
       sub_compact->builder->AddCharPack(output_buf, SST_size, last_entry_count);
@@ -1091,8 +1100,11 @@ void CompactionJob::ProcessKeyValueCompaction(SubcompactionState* sub_compact) {
         free(output_buf);
         output_buf = NULL;
       }
+#ifdef HWdebug
+      post_micros += (env_->NowMicros() - post_start_micros);
+#endif
     }
-    hw_->end_micros = env_->NowMicros() - start_micros;
+    hw_->end_micros = env_->NowMicros() - start_micros - post_micros;
     hw_->free_resource();
   } else
 #endif
