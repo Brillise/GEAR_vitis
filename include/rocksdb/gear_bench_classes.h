@@ -850,7 +850,7 @@ class Stats {
     double elapsed = (finish_ - start_) * 1e-6;
     double throughput = (double)done_ / elapsed;
 
-    fprintf(stdout, "%-12s : %11.3f micros/op %ld ops/sec;%s%s\n",
+    fprintf(stdout, "\n%-12s : %11.3f micros/op %ld ops/sec;%s%s\n",
             name.ToString().c_str(), seconds_ * 1e6 / done_, (long)throughput,
             (extra.empty() ? "" : " "), extra.c_str());
 

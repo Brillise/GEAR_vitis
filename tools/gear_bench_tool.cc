@@ -487,7 +487,7 @@ void Benchmark::DoWrite(ThreadState* thread, WriteMode write_mode) {
   int entries_per_batch_ = FLAGS_write_batch_size;
   int64_t stage = 0;
   int64_t num_written = 0;
-  while (!duration.Done(1)) {
+  while (!duration.Done(FLAGS_write_batch_size)) {
     if (duration.GetStage() != stage) {
       stage = duration.GetStage();
       if (db_.db != nullptr) {
@@ -499,14 +499,16 @@ void Benchmark::DoWrite(ThreadState* thread, WriteMode write_mode) {
     DBWithColumnFamilies* db_with_cfh = &db_;
     batch.Clear();
 
-    int64_t rand_num = key_gens[id]->Next();
-    key = key_gens[id]->GenerateKeyFromInt(rand_num);
-    Slice val = "vvvvvvvvvv";
-    batch.Put(key, val);
-    bytes += 26;
-    ++num_written;
-    s = db_with_cfh->db->Put(write_options_, key, val);
-    //    s = db_with_cfh->db->Write(write_options_, &batch);
+    for (uint64_t i = 0; i < FLAGS_write_batch_size; i++) {
+      int64_t rand_num = key_gens[id]->Next();
+      key = key_gens[id]->GenerateKeyFromInt(rand_num);
+      Slice val = "vvvvvvvvvv";
+      batch.Put(key, val);
+      bytes += 26;
+      ++num_written;
+    }
+    //    s = db_with_cfh->db->Put(write_options_, key, val);
+    s = db_with_cfh->db->Write(write_options_, &batch);
 
     //
     //    if (thread->shared->write_rate_limiter.get() != nullptr) {
@@ -520,7 +522,8 @@ void Benchmark::DoWrite(ThreadState* thread, WriteMode write_mode) {
     //      thread->stats.ResetLastOpTime();
     //    }
 
-    thread->stats.FinishedOps(db_with_cfh, db_with_cfh->db, 1, kWrite);
+    thread->stats.FinishedOps(db_with_cfh, db_with_cfh->db,
+                              FLAGS_write_batch_size, kWrite);
   }
   assert(s.ok());
   if (!s.ok()) {
